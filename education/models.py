@@ -33,12 +33,11 @@ class Course(models.Model):
 class Theme(models.Model):
     title = models.CharField(max_length=255, verbose_name='Название')
     course = models.ForeignKey(Course, on_delete=models.CASCADE, verbose_name='Курс', related_name='themes')
-    position = models.IntegerField(verbose_name='Позиция', validators=[MinValueValidator(1)])
+    position = models.PositiveSmallIntegerField(verbose_name='Позиция')
 
     class Meta:
         verbose_name = 'Тема'
         verbose_name_plural = 'Темы'
-        unique_together = ['position', 'course']
         ordering = ('position',)
 
     def __str__(self):
@@ -48,14 +47,13 @@ class Theme(models.Model):
 class Lesson(models.Model):
     title = models.CharField(max_length=255, verbose_name='Название')
     theme = models.ForeignKey(Theme, on_delete=models.PROTECT, verbose_name='Тема', related_name='lessons')
-    position = models.IntegerField(verbose_name='Позиция', validators=[MinValueValidator(1)])
+    position = models.PositiveSmallIntegerField(verbose_name='Позиция')
     update_date = models.DateField(auto_now=True, verbose_name='Обновлён')
     text = models.TextField(verbose_name='Текст')
 
     class Meta:
         verbose_name = 'Урок'
         verbose_name_plural = 'Уроки'
-        unique_together = ['position', 'theme']
         ordering = ('position',)
 
     def __str__(self):

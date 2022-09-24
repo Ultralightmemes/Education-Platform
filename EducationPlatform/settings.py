@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'education',
+    'adminsortable2',
 ]
 
 MIDDLEWARE = [
