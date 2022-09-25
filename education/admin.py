@@ -1,4 +1,4 @@
-from adminsortable2.admin import SortableStackedInline, SortableAdminMixin, SortableAdminBase, SortableTabularInline
+from adminsortable2.admin import SortableAdminBase, SortableTabularInline
 from django.contrib import admin
 from django.contrib.admin.widgets import FilteredSelectMultiple
 from django import forms
@@ -63,7 +63,7 @@ class CourseAdminForm(forms.ModelForm):
         queryset=Category.objects.all(),
         required=False,
         widget=FilteredSelectMultiple(
-            verbose_name=('Категории'),
+            verbose_name='Категории',
             is_stacked=False
         )
     )
