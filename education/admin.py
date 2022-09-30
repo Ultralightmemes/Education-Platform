@@ -4,35 +4,24 @@ from django.contrib.admin.widgets import FilteredSelectMultiple
 from django import forms
 from django.utils.text import format_lazy
 
-from education.models import Lesson, VideoTask, ExerciseTask, Course, Theme, TestTask, TestOption, Category
+from education.mixins import SaveTaskMixin, SaveThemeMixin, SaveLessonMixin
+from education.models import Lesson, ExerciseTask, Course, Theme, TestTask, TestOption, Category, Task
 
 
 class LessonInline(SortableTabularInline):
     model = Lesson
-    fk_name = 'theme'
-    exclude = ['text']
-    extra = 1
-
-
-class VideoTaskInline(admin.TabularInline):
-    model = VideoTask
-    fk_name = 'theme'
     exclude = ['text', 'video']
     extra = 1
 
 
-class ExerciseTaskInline(admin.TabularInline):
-    model = ExerciseTask
-    fk_name = 'theme'
-    exclude = ['text', 'answer']
+class TaskInline(SortableTabularInline):
+    model = Task
+    fk_name = 'lesson'
+    fields = ['title', 'is_published']
     extra = 1
 
-
-class TestTaskInline(admin.TabularInline):
-    model = TestTask
-    fk_name = 'theme'
-    exclude = ['text']
-    extra = 1
+    def has_add_permission(self, request, obj):
+        return False
 
 
 class TestOptionInline(admin.TabularInline):
@@ -43,6 +32,7 @@ class TestOptionInline(admin.TabularInline):
 class ThemeInline(SortableTabularInline):
     model = Theme
     extra = 1
+    exclude = ('description',)
 
 
 class CategoryInline(admin.StackedInline):
@@ -50,12 +40,30 @@ class CategoryInline(admin.StackedInline):
     filter_horizontal = ('courses',)
 
 
-@admin.register(TestTask)
-class TestTaskAdmin(admin.ModelAdmin):
-    list_display = ['theme', 'title', 'update_date']
-    inlines = [TestOptionInline]
-    list_filter = ['theme']
-    search_fields = ['title__icontains']
+@admin.register(Category)
+class CategoryAdmin(admin.ModelAdmin):
+    filter_horizontal = ['courses']
+
+    def formfield_for_manytomany(self, db_field, request, **kwargs):
+        db = kwargs.get('using')
+
+        if db_field.name == 'courses':
+            kwargs['widget'] = FilteredSelectMultiple(
+                db_field.verbose_name, is_stacked=False
+            )
+        else:
+            return super().formfield_for_manytomany(db_field, request, **kwargs)
+        if 'queryset' not in kwargs:
+            queryset = Course.objects.all()
+            if queryset is not None:
+                kwargs['queryset'] = queryset
+        form_field = db_field.formfield(**kwargs)
+        msg = 'Hold down “Control”, or “Command” on a Mac, to select more than one.'
+        help_text = form_field.help_text
+        form_field.help_text = (
+            format_lazy('{} {}', help_text, msg) if help_text else msg
+        )
+        return form_field
 
 
 class CourseAdminForm(forms.ModelForm):
@@ -102,59 +110,38 @@ class CourseAdmin(SortableAdminBase, admin.ModelAdmin):
 
 
 @admin.register(Theme)
-class ThemeAdmin(SortableAdminBase, admin.ModelAdmin):
-    list_display = ['title', 'course', 'lesson_counter']
+class ThemeAdmin(SaveThemeMixin, SortableAdminBase, admin.ModelAdmin):
+    list_display = ['title', 'course', 'is_published', 'lesson_counter']
     inlines = [LessonInline]
     list_filter = ('course',)
     search_fields = ['title__icontains']
+    exclude = ('position',)
 
     def lesson_counter(self, obj):
         return obj.lessons.count()
 
-    lesson_counter.short_description = 'Количество занятий'
+    lesson_counter.short_description = 'Количество заданий'
 
 
-@admin.register(VideoTask)
-class VideoTaskAdmin(admin.ModelAdmin):
-    list_display = ['theme', 'title', 'file_is_uploaded', 'update_date']
-    list_filter = ('theme',)
+@admin.register(Lesson)
+class LessonAdmin(SaveLessonMixin, SortableAdminBase, admin.ModelAdmin):
+    list_display = ['title', 'theme', 'is_published', 'update_date']
+    exclude = ('position', )
+    list_filter = ['theme']
     search_fields = ['title__icontains']
+    inlines = [TaskInline]
 
-    def file_is_uploaded(self, obj):
-        return True if obj.video else False
 
-    file_is_uploaded.boolean = True
-    file_is_uploaded.short_description = 'Видео загружено'
+@admin.register(TestTask)
+class TestTaskAdmin(SaveTaskMixin, admin.ModelAdmin):
+    list_display = ['title', 'lesson', 'is_published']
+    inlines = [TestOptionInline]
+    list_filter = ['lesson']
+    search_fields = ['title__icontains']
 
 
 @admin.register(ExerciseTask)
-class ExerciseTaskAdmin(admin.ModelAdmin):
-    list_display = ['theme', 'title', 'update_date']
+class ExerciseTaskAdmin(SaveTaskMixin, admin.ModelAdmin):
+    list_display = ['title', 'lesson', 'is_published']
     search_fields = ['title__icontains']
-    list_filter = ('theme',)
-
-
-@admin.register(Category)
-class CategoryAdmin(admin.ModelAdmin):
-    filter_horizontal = ['courses']
-
-    def formfield_for_manytomany(self, db_field, request, **kwargs):
-        db = kwargs.get('using')
-
-        if db_field.name == 'courses':
-            kwargs['widget'] = FilteredSelectMultiple(
-                db_field.verbose_name, is_stacked=False
-            )
-        else:
-            return super().formfield_for_manytomany(db_field, request, **kwargs)
-        if 'queryset' not in kwargs:
-            queryset = Course.objects.all()
-            if queryset is not None:
-                kwargs['queryset'] = queryset
-        form_field = db_field.formfield(**kwargs)
-        msg = 'Hold down “Control”, or “Command” on a Mac, to select more than one.'
-        help_text = form_field.help_text
-        form_field.help_text = (
-            format_lazy('{} {}', help_text, msg) if help_text else msg
-        )
-        return form_field
+    list_filter = ['lesson']
