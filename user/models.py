@@ -32,13 +32,13 @@ class User(AbstractUser):
     email = models.EmailField(max_length=255, unique=True, db_index=True, verbose_name='Почтовый адрес')
     first_name = models.CharField(max_length=255, verbose_name='Имя')
     last_name = models.CharField(max_length=255, verbose_name='Фамилия')
-    patronymic = models.CharField(max_length=255, null=True, verbose_name='Отчество')
+    patronymic = models.CharField(max_length=255, blank=True, verbose_name='Отчество')
     is_active = models.BooleanField(default=True, verbose_name='Активен')
     is_staff = models.BooleanField(default=False, verbose_name='Работник')
     username = None
     courses = models.ManyToManyField(Course, through='UserCourse', related_name='users', verbose_name='Курсы')
     lessons = models.ManyToManyField(Lesson, through='UserLesson', related_name='users', verbose_name='Занятия')
-    image = models.ImageField(upload_to='profile/%Y/%m/%d', null=True, blank=True, verbose_name='Аватар')
+    image = models.ImageField(upload_to='profile/%Y/%m/%d', blank=True, verbose_name='Аватар')
 
     objects = UserAccountManager()
 
@@ -67,6 +67,7 @@ class UserLesson(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE)
     percents = models.PositiveSmallIntegerField(validators=(MinValueValidator(0), MaxValueValidator(100)), default=0)
+    is_done = models.BooleanField(default=False)
 
     class Meta:
         unique_together = ('user', 'lesson')

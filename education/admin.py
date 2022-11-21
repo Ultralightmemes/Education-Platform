@@ -19,6 +19,7 @@ class TaskInline(SortableTabularInline):
     fk_name = 'lesson'
     fields = ['title', 'is_published']
     extra = 1
+    max_num = 10
 
     def has_add_permission(self, request, obj):
         return False
@@ -27,6 +28,7 @@ class TaskInline(SortableTabularInline):
 class TestOptionInline(admin.TabularInline):
     model = TestOption
     extra = 2
+    max_num = 5
 
 
 class ThemeInline(SortableTabularInline):

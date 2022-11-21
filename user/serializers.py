@@ -18,6 +18,21 @@ class RegistrationSerializer(serializers.ModelSerializer):
         return User.objects.create_user(**validated_data)
 
 
+class UserSerializer(serializers.ModelSerializer):
+    is_staff = serializers.BooleanField(read_only=True)
+
+    class Meta:
+        model = User
+        fields = ['email', 'first_name', 'last_name', 'patronymic', 'image', 'is_staff']
+
+
+class ImageSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = User
+        fields = ['image']
+
+
 class AnswerSerializer(serializers.Serializer):
     classname = serializers.CharField(max_length=255, read_only=True)
     lesson_id = serializers.IntegerField(read_only=True)

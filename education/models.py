@@ -20,6 +20,8 @@ class Course(models.Model):
     publish_date = models.DateField(default=timezone.now, verbose_name='Создан')
     update_date = models.DateField(auto_now=True, verbose_name='Обновлён')
     is_published = models.BooleanField(default=False, verbose_name='Опубликован')
+    text = models.TextField(verbose_name='Описание')
+    image = models.ImageField(upload_to='course/%Y/%m/%d', verbose_name='Изображение')
 
     class Meta:
         verbose_name = 'Курс'
@@ -45,10 +47,20 @@ class Theme(models.Model):
         return self.title
 
 
+def validate_file_extension(value):
+    import os
+    from django.core.exceptions import ValidationError
+    ext = os.path.splitext(value.name)[1]
+    valid_extensions = ['.mp4']
+    if not ext.lower() in valid_extensions:
+        raise ValidationError('Unsupported file extension.')
+
+
 class Lesson(models.Model):
     title = models.CharField(max_length=255, verbose_name='Название')
     theme = models.ForeignKey(Theme, on_delete=models.PROTECT, verbose_name='Тема', related_name='lessons')
-    video = models.FileField(blank=True, verbose_name='Видео')
+    video = models.FileField(blank=True, verbose_name='Видео', upload_to='lesson/%Y/%m/%d',
+                             validators=[validate_file_extension])
     position = models.PositiveSmallIntegerField(verbose_name='Позиция')
     update_date = models.DateField(auto_now=True, verbose_name='Обновлён')
     text = models.TextField(verbose_name='Текст')

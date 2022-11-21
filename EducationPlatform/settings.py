@@ -9,6 +9,7 @@ https://docs.djangoproject.com/en/4.1/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/4.1/ref/settings/
 """
+import os
 from datetime import timedelta
 from pathlib import Path
 
@@ -25,7 +26,10 @@ SECRET_KEY = 'django-insecure-&ex7*^1o#gxu$m3%y0l*pdh%kvr*w$z*jtdzl0y8x=^@$9t+ar
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
+
+CORS_ORIGIN_ALLOW_ALL = True
+CORS_ALLOWED_ORIGINS = ['http://localhost:3000', 'http://127.0.0.1:3000']
 
 
 # Application definition
@@ -42,7 +46,8 @@ INSTALLED_APPS = [
     'education',
     'adminsortable2',
     'user.apps.UserConfig',
-    'rest_framework_simplejwt'
+    'rest_framework_simplejwt',
+    'django_celery_beat',
 ]
 
 MIDDLEWARE = [
@@ -138,6 +143,10 @@ AUTH_USER_MODEL = 'user.User'
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
+# STATICFILES_DIRS = [
+#     os.path.join(BASE_DIR, "static"),
+# ]
+
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
@@ -175,3 +184,18 @@ SIMPLE_JWT = {
     'SLIDING_TOKEN_LIFETIME': timedelta(minutes=5),
     'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
 }
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = 'smtp.gmail.com'
+EMAIL_USE_TLS = True
+EMAIL_PORT = 587
+
+EMAIL_HOST_USER = 'djangocelery1337@gmail.com'
+EMAIL_HOST_PASSWORD = 'ykwkpblucamkthtf'
+
+
+result_backend = "redis://127.0.0.1:6379"
+BROKER_URL = 'redis://127.0.0.1:6379'
+accept_content = ['application/json']
+result_serializer = 'json'
+timezone = 'Europe/Minsk'
