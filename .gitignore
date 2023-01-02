@@ -3,5 +3,8 @@
 /media
 Ruby.png
 celerybeat-schedule*
+celerybeat-schedule.bak
+celerybeat-schedule.dat
+celerybeat-schedule.dir
 dump.rdb
 .env
