@@ -6,7 +6,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from education.models import Course, Category
-from education.serializers import CategorySerializer, MultipleCourseSerializer, CourseSerializer
+from education.serializers import CategorySerializer
 
 
 class CategoriesTest(APITestCase):
@@ -48,4 +48,3 @@ class CoursesTest(APITestCase):
         response = self.client.get(reverse('course-list'))
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
-

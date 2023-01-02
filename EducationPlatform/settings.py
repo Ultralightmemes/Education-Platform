@@ -21,17 +21,19 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-# SECRET_KEY = 'django-insecure-&ex7*^1o#gxu$m3%y0l*pdh%kvr*w$z*jtdzl0y8x=^@$9t+ar'
 SECRET_KEY = os.environ.get('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-# DEBUG = True
 DEBUG = str(os.environ.get('DEBUG')) == "1"
 
 ALLOWED_HOSTS = ['*']
 
 CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOWED_ORIGINS = ['http://localhost:3000', 'http://127.0.0.1:3000']
+
+INTERNAL_IPS = [
+    '127.0.0.1'
+]
 
 
 # Application definition
@@ -52,6 +54,7 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt.token_blacklist',
     'django_celery_beat',
     'django_filters',
+    'debug_toolbar',
 ]
 
 MIDDLEWARE = [
@@ -63,6 +66,9 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+
+    'debug_toolbar.middleware.DebugToolbarMiddleware',
+
 ]
 
 ROOT_URLCONF = 'EducationPlatform.urls'
@@ -70,8 +76,7 @@ ROOT_URLCONF = 'EducationPlatform.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'templates']
-        ,
+        'DIRS': [BASE_DIR / 'templates'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -87,41 +92,38 @@ TEMPLATES = [
 WSGI_APPLICATION = 'EducationPlatform.wsgi.application'
 
 
-# Database
-# https://docs.djangoproject.com/en/4.1/ref/settings/#databases
-
 # Common database
-
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.mysql',
-#         'NAME': 'platform',
-#         'USER': 'root',
-#         'PASSWORD': 'admin',
-#         'HOST': 'localhost',
-#     }
-# }
-
-# RESULT_BACKEND = "redis://127.0.0.1:6379"
-# BROKER_URL = "redis://127.0.0.1:6379"
-# accept_content = ['application/json']
-# result_serializer = 'json'
-
-# Database for docker
 
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'platform',
-        'USER': 'mysql',
+        'USER': 'root',
         'PASSWORD': 'admin',
-        'HOST': 'mysql_db',
-        # 'PORT': 3307,
+        'HOST': 'localhost',
     }
 }
 
-CELERY_BROKER_URL = os.environ.get("CELERY_BROKER", "redis://redis:6379/0")
-CELERY_RESULT_BACKEND = os.environ.get("CELERY_BACKEND", "redis://redis:6379/0")
+RESULT_BACKEND = "redis://127.0.0.1:6379"
+BROKER_URL = "redis://127.0.0.1:6379"
+accept_content = ['application/json']
+result_serializer = 'json'
+
+# Database for docker
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',
+#         'NAME': 'platform',
+#         'USER': 'mysql',
+#         'PASSWORD': 'admin',
+#         'HOST': 'mysql_db',
+#         # 'PORT': 3307,
+#     }
+# }
+#
+# CELERY_BROKER_URL = os.environ.get("CELERY_BROKER", "redis://redis:6379/0")
+# CELERY_RESULT_BACKEND = os.environ.get("CELERY_BACKEND", "redis://redis:6379/0")
 
 
 # Password validation
@@ -220,14 +222,4 @@ EMAIL_PORT = 587
 EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
 
-# EMAIL_HOST_USER = 'djangocelery1337@gmail.com'
-# EMAIL_HOST_PASSWORD = 'kvsfoftodctbzexy'
-
 timezone = 'Europe/Minsk'
-
-# Common celery settings
-
-
-
-
-

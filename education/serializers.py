@@ -55,7 +55,7 @@ class ThemeWithLessonSerializer(ModelSerializer):
 
     class Meta:
         model = Theme
-        fields = ['id', 'title', 'position', 'lessons',]
+        fields = ['id', 'title', 'position', 'lessons', ]
 
 
 class ExerciseTaskSerializer(ModelSerializer):
