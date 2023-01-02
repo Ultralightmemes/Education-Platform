@@ -58,6 +58,7 @@ class User(AbstractUser):
 class UserCourse(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     course = models.ForeignKey(Course, on_delete=models.CASCADE)
+    rating = models.IntegerField(null=True, default=None, validators=[MinValueValidator(1), MaxValueValidator(5)])
 
     class Meta:
         unique_together = ('user', 'course')

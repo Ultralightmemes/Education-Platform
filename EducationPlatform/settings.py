@@ -21,10 +21,12 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/4.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-&ex7*^1o#gxu$m3%y0l*pdh%kvr*w$z*jtdzl0y8x=^@$9t+ar'
+# SECRET_KEY = 'django-insecure-&ex7*^1o#gxu$m3%y0l*pdh%kvr*w$z*jtdzl0y8x=^@$9t+ar'
+SECRET_KEY = os.environ.get('SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+# DEBUG = True
+DEBUG = str(os.environ.get('DEBUG')) == "1"
 
 ALLOWED_HOSTS = ['*']
 
@@ -47,7 +49,9 @@ INSTALLED_APPS = [
     'adminsortable2',
     'user.apps.UserConfig',
     'rest_framework_simplejwt',
+    'rest_framework_simplejwt.token_blacklist',
     'django_celery_beat',
+    'django_filters',
 ]
 
 MIDDLEWARE = [
@@ -86,15 +90,38 @@ WSGI_APPLICATION = 'EducationPlatform.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.1/ref/settings/#databases
 
+# Common database
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',
+#         'NAME': 'platform',
+#         'USER': 'root',
+#         'PASSWORD': 'admin',
+#         'HOST': 'localhost',
+#     }
+# }
+
+# RESULT_BACKEND = "redis://127.0.0.1:6379"
+# BROKER_URL = "redis://127.0.0.1:6379"
+# accept_content = ['application/json']
+# result_serializer = 'json'
+
+# Database for docker
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'platform',
-        'USER': 'root',
+        'USER': 'mysql',
         'PASSWORD': 'admin',
-        'HOST': 'localhost',
+        'HOST': 'mysql_db',
+        # 'PORT': 3307,
     }
 }
+
+CELERY_BROKER_URL = os.environ.get("CELERY_BROKER", "redis://redis:6379/0")
+CELERY_RESULT_BACKEND = os.environ.get("CELERY_BACKEND", "redis://redis:6379/0")
 
 
 # Password validation
@@ -190,12 +217,17 @@ EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_USE_TLS = True
 EMAIL_PORT = 587
 
-EMAIL_HOST_USER = 'djangocelery1337@gmail.com'
-EMAIL_HOST_PASSWORD = 'ykwkpblucamkthtf'
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')
 
+# EMAIL_HOST_USER = 'djangocelery1337@gmail.com'
+# EMAIL_HOST_PASSWORD = 'kvsfoftodctbzexy'
 
-result_backend = "redis://127.0.0.1:6379"
-BROKER_URL = 'redis://127.0.0.1:6379'
-accept_content = ['application/json']
-result_serializer = 'json'
 timezone = 'Europe/Minsk'
+
+# Common celery settings
+
+
+
+
+

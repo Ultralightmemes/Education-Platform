@@ -2,6 +2,7 @@ from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
 
 from education.models import Course, Lesson, Theme, Category, ExerciseTask, TestOption, TestTask
+from user.models import UserCourse
 
 
 class ThemeInCourseSerializer(ModelSerializer):
@@ -19,6 +20,7 @@ class CategorySerializer(ModelSerializer):
 class CourseSerializer(ModelSerializer):
     themes = ThemeInCourseSerializer(many=True)
     categories = CategorySerializer(many=True)
+    rating = serializers.FloatField()
 
     class Meta:
         model = Course
@@ -32,7 +34,7 @@ class MultipleCourseSerializer(ModelSerializer):
 
     class Meta:
         model = Course
-        fields = ('id', 'name', 'categories', 'image', 'percents',)
+        fields = ('id', 'name', 'categories', 'image', 'percents', )
 
     def get_image(self, course):
         request = self.context.get('request')
@@ -40,9 +42,12 @@ class MultipleCourseSerializer(ModelSerializer):
 
 
 class LessonSerializer(ModelSerializer):
+    is_done = serializers.BooleanField()
+    is_auto_done = serializers.BooleanField()
+
     class Meta:
         model = Lesson
-        fields = ['id', 'title', 'position']
+        fields = ['id', 'title', 'position', 'is_done', 'is_auto_done', ]
 
 
 class ThemeWithLessonSerializer(ModelSerializer):
@@ -50,7 +55,7 @@ class ThemeWithLessonSerializer(ModelSerializer):
 
     class Meta:
         model = Theme
-        fields = ['id', 'title', 'position', 'lessons']
+        fields = ['id', 'title', 'position', 'lessons',]
 
 
 class ExerciseTaskSerializer(ModelSerializer):
@@ -102,3 +107,10 @@ class AnswerSerializer(serializers.Serializer):
     lesson = serializers.IntegerField()
     exercises = ExerciseAnswerSerializer(many=True)
     tests = TestAnswerSerializer(many=True)
+
+
+class RateSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = UserCourse
+        fields = ('rating', )
