@@ -1,5 +1,6 @@
 from adminsortable2.admin import SortableAdminBase, SortableTabularInline
 from django.contrib import admin
+from django.contrib.admin import AdminSite
 from django.contrib.admin.widgets import FilteredSelectMultiple
 from django import forms
 from django.utils.text import format_lazy

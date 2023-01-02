@@ -1,0 +1,7 @@
+/venv
+/.idea
+/media
+Ruby.png
+celerybeat-schedule*
+dump.rdb
+.env
