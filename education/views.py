@@ -1,7 +1,6 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter, OrderingFilter
-from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 
@@ -11,12 +10,6 @@ from education.serializers import CourseSerializer, ThemeWithLessonSerializer, M
 from education.service import calculate_course_rate, annotate_themes, annotate_courses, count_exercise_percents
 from education.tasks import send_subscribe_mail
 from user.models import User, UserCourse, UserLesson
-
-
-class LessonPagination(PageNumberPagination):
-    page_size = 1
-    page_query_param = 'page'
-    page_size_query_param = 'page_size'
 
 
 class CourseViewSet(viewsets.ReadOnlyModelViewSet):

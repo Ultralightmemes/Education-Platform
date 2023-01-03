@@ -19,6 +19,7 @@ def annotate_themes(user, pk):
         for lesson in theme.lessons.all():
             lesson.is_done = check_if_lesson_is_done(lesson, user)
             lesson.is_auto_done = False if lesson.tasks.all() else True
+    return themes
 
 
 def check_if_lesson_is_done(lesson, user):
