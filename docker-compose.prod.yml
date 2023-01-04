@@ -3,8 +3,10 @@ version: '3.9'
 services:
   api:
     container_name: education-api
-    build: .
-    command: bash -c "python manage.py migrate && python /usr/src/api/manage.py runserver 0.0.0.0:8000 && ["./wait-for-it.sh", "db:5432", "--", "python", "app.py"]"
+    build:
+      context: .
+      dockerfile: Dockerfile.prod
+#    command: bash -c "EducationPlatform.wsgi:application --bind 0.0.0.0:8000 && ["./wait-for-it.sh", "db:5432", "--", "python", "app.py"]"
     volumes:
       - .:/usr/src/api/
     ports:
@@ -18,8 +20,6 @@ services:
       - MYSQL_USER=mysql
       - MYSQL_PASSWORD=admin
       - MYSQL_DATABASE_HOST=mysql_db
-#    env_file:
-#      - ./EducationPlatform/env.dev
     depends_on:
       - mysql_db
       - redis
@@ -89,6 +89,15 @@ services:
       - redis
       - celery
       - celery_beat
+
+  nginx:
+    build: ./nginx
+    volumes:
+      - .:/usr/src/api/
+    ports:
+      - "80:80"
+    depends_on:
+      - api
 
 volumes:
   mysql_data:
