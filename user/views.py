@@ -1,3 +1,4 @@
+from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework import generics, status
 from rest_framework.response import Response
@@ -15,21 +16,16 @@ class RegistrationAPIView(generics.CreateAPIView):
 
 
 class UserAPIView(generics.RetrieveUpdateAPIView):
-    def get(self, request):
-        if request.user.is_anonymous:
-            return Response(status=status.HTTP_401_UNAUTHORIZED)
-        user = User.objects.get(email=request.user.email)
-        serializer = UserSerializer(user)
-        return Response(serializer.data)
+    permission_classes = (IsAuthenticated, )
+    serializer_class = UserSerializer
 
-    def patch(self, request):
-        if request.user.is_anonymous:
-            return Response(status=status.HTTP_401_UNAUTHORIZED)
-        user = User.objects.get(email=request.user.email)
-        serializer = UserSerializer(user, request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-        return Response()
+    def get_queryset(self):
+        return User.objects.filter(pk=self.request.user.id)
+
+    def get_object(self):
+        queryset = self.get_queryset()
+        obj = get_object_or_404(queryset, pk=self.request.user.id)
+        return obj
 
 
 class LogoutAPIView(APIView):

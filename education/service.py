@@ -4,7 +4,7 @@ from education.models import Theme, Lesson, Course, TestTask, ExerciseTask
 from user.models import UserCourse, UserLesson
 
 
-def calculate_course_rate(course):
+def calculate_course_rating(course):
     rates = UserCourse.objects.filter(~Q(rating=None), course=course).values_list('rating', flat=True)
     try:
         return sum(rates) / len(rates)

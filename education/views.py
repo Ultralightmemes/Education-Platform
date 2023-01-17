@@ -1,3 +1,4 @@
+from django.db import IntegrityError
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.filters import SearchFilter, OrderingFilter
@@ -7,7 +8,7 @@ from rest_framework.response import Response
 from education.models import Course, Lesson, Theme, Category, ExerciseTask, TestTask
 from education.serializers import CourseSerializer, ThemeWithLessonSerializer, MultipleCourseSerializer, \
     CategorySerializer, LessonDetailSerializer, AnswerSerializer, RateSerializer
-from education.service import calculate_course_rate, annotate_themes, annotate_courses, count_exercise_percents
+from education.service import calculate_course_rating, annotate_themes, annotate_courses, count_exercise_percents
 from education.tasks import send_subscribe_mail
 from user.models import User, UserCourse, UserLesson
 
@@ -33,10 +34,10 @@ class CourseViewSet(viewsets.ReadOnlyModelViewSet):
 
     def retrieve(self, request, pk=None):
         try:
-            course = Course.objects.prefetch_related('themes').get(pk=pk)
+            course = Course.objects.prefetch_related('themes', 'categories').get(pk=pk)
         except Course.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
-        course.rating = calculate_course_rate(course)
+        course.rating = calculate_course_rating(course)
         serializer = CourseSerializer(course)
         return Response(serializer.data)
 
@@ -46,6 +47,8 @@ class CourseViewSet(viewsets.ReadOnlyModelViewSet):
         if user.is_anonymous:
             return Response(status=status.HTTP_401_UNAUTHORIZED)
         themes = annotate_themes(user, pk)
+        if not themes:
+            return Response(status=status.HTTP_404_NOT_FOUND)
         serializer = ThemeWithLessonSerializer(themes, many=True)
         return Response(serializer.data)
 
@@ -55,12 +58,15 @@ class CourseViewSet(viewsets.ReadOnlyModelViewSet):
         if user.is_anonymous:
             return Response(status=status.HTTP_401_UNAUTHORIZED)
         user = User.objects.get(email=user.email)
-        user_course_obj, created = UserCourse.objects.get_or_create(user=user, course_id=pk)
-        if not created:
-            return Response()
+        try:
+            user_course_obj, created = UserCourse.objects.get_or_create(user=user, course_id=pk)
+            if not created:
+                return Response(status=status.HTTP_204_NO_CONTENT)
+        except IntegrityError:
+            return Response(status=status.HTTP_404_NOT_FOUND)
         user_course_obj.save()
         send_subscribe_mail.delay(user.email, user.first_name, user_course_obj.course.name)
-        return Response()
+        return Response(status=status.HTTP_201_CREATED)
 
     @action(methods=['get'], detail=False, url_path='my')
     def get_user_courses(self, request):
@@ -82,7 +88,7 @@ class CourseViewSet(viewsets.ReadOnlyModelViewSet):
             serializer.save()
         else:
             return Response(status=status.HTTP_400_BAD_REQUEST)
-        return Response(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 class LessonViewSet(viewsets.ReadOnlyModelViewSet):
@@ -93,14 +99,19 @@ class LessonViewSet(viewsets.ReadOnlyModelViewSet):
         return Lesson.objects.filter(theme__course=self.kwargs['course_pk'], is_published=True).order_by(
             'theme__position', 'position')
 
-    def list(self, request, pk=None, *args, **kwargs):
+    def list(self, request, course_pk=None, *args, **kwargs):
+        if not Course.objects.filter(pk=course_pk).exists():
+            return Response(status=status.HTTP_404_NOT_FOUND)
         instance = self.get_queryset().first()
         if not instance:
             return Response(status=status.HTTP_404_NOT_FOUND)
-        next_lesson = Lesson.objects.filter(theme=instance.theme,
-                                            position__gt=instance.position).first() or Theme.objects.filter(
-            position__gt=instance.theme.position).first().lessons.first() or None
-        instance.next_lesson = next_lesson.id if next_lesson else None
+        try:
+            next_lesson = Lesson.objects.filter(theme=instance.theme,
+                                                position__gt=instance.position).first() or Theme.objects.filter(
+                position__gt=instance.theme.position).first().lessons.first()
+            instance.next_lesson = next_lesson.id if next_lesson else None
+        except AttributeError:
+            instance.next_lesson = None
         instance.previous_lesson = None
         instance.exercises = ExerciseTask.objects.filter(lesson=instance, is_published=True)
         instance.tests = TestTask.objects.filter(lesson=instance, is_published=True)
@@ -124,16 +135,24 @@ class LessonViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(methods=['post'], detail=True)
     def answer(self, request, pk=None, course_pk=None):
+        if not Course.objects.filter(pk=course_pk).exists():
+            return Response(status=status.HTTP_404_NOT_FOUND)
         user = request.user
         if user.is_anonymous:
             return Response(status=status.HTTP_401_UNAUTHORIZED)
         serializer = AnswerSerializer(request.data)
-        user_lesson, created = UserLesson.objects.get_or_create(user=user,
-                                                                lesson_id=pk)
-        user_lesson.percents = count_exercise_percents(serializer.data, user_lesson)
+        try:
+            user_lesson, created = UserLesson.objects.get_or_create(user=user,
+                                                                    lesson_id=pk)
+        except IntegrityError:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        try:
+            user_lesson.percents = count_exercise_percents(serializer.data, user_lesson)
+        except KeyError:
+            user_lesson.percents = 100
         user_lesson.is_done = True
         user_lesson.save()
-        return Response()
+        return Response(status=status.HTTP_202_ACCEPTED)
 
 
 class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
@@ -143,5 +162,7 @@ class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
 
     def retrieve(self, request, pk=None):
         objects = Course.objects.filter(categories=pk)
+        if not objects:
+            return Response(status=status.HTTP_404_NOT_FOUND)
         serializer = MultipleCourseSerializer(objects, many=True, context={'request': request})
         return Response(serializer.data)
