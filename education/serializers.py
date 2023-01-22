@@ -17,16 +17,6 @@ class CategorySerializer(ModelSerializer):
         fields = ('id', 'name')
 
 
-class CourseSerializer(ModelSerializer):
-    themes = ThemeInCourseSerializer(many=True)
-    categories = CategorySerializer(many=True)
-    rating = serializers.FloatField()
-
-    class Meta:
-        model = Course
-        fields = '__all__'
-
-
 class MultipleCourseSerializer(ModelSerializer):
     categories = CategorySerializer(many=True)
     image = serializers.SerializerMethodField()
@@ -39,6 +29,31 @@ class MultipleCourseSerializer(ModelSerializer):
     def get_image(self, course):
         request = self.context.get('request')
         return request.build_absolute_uri(course.image.url)
+
+
+class CategoryDetailSerializer(ModelSerializer):
+    courses = MultipleCourseSerializer(many=True)
+
+    class Meta:
+        model = Category
+        fields = '__all__'
+
+
+class CreateCourseSerializer(ModelSerializer):
+
+    class Meta:
+        model = Course
+        exclude = ('publish_date', 'update_date', 'image', 'is_published')
+
+
+class CourseSerializer(ModelSerializer):
+    themes = ThemeInCourseSerializer(many=True)
+    categories = CategorySerializer(many=True)
+    rating = serializers.FloatField()
+
+    class Meta:
+        model = Course
+        fields = '__all__'
 
 
 class LessonSerializer(ModelSerializer):
@@ -55,7 +70,23 @@ class ThemeWithLessonSerializer(ModelSerializer):
 
     class Meta:
         model = Theme
-        fields = ['id', 'title', 'position', 'lessons', ]
+        fields = ['id', 'title', 'position', 'lessons', 'course']
+
+
+class ThemeSerializer(ModelSerializer):
+    position = serializers.IntegerField(required=False)
+
+    class Meta:
+        model = Theme
+        fields = ['title', 'description', 'position', 'is_published', 'course']
+
+
+class ThemeUpdateSerializer(ModelSerializer):
+    position = serializers.IntegerField(required=False)
+
+    class Meta:
+        model = Theme
+        fields = ['title', 'description', 'position', 'is_published']
 
 
 class ExerciseTaskSerializer(ModelSerializer):
@@ -74,12 +105,12 @@ class TestTaskSerializer(ModelSerializer):
     radio = serializers.SerializerMethodField('get_radio')
     options = TestOptionSerializer(many=True)
 
+    def get_radio(self, test_task):
+        return True if sum(option.is_true for option in test_task.options.all()) == 1 else False
+
     class Meta:
         model = TestTask
         exclude = ['lesson', 'is_published']
-
-    def get_radio(self, test_task):
-        return True if sum(option.is_true for option in test_task.options.all()) == 1 else False
 
 
 class LessonDetailSerializer(ModelSerializer):

@@ -15,3 +15,10 @@ def test_user_info(api_client_with_credentials):
     url = reverse('user-info')
     response = api_client_with_credentials.get(url)
     assert response.status_code == 200
+
+
+@pytest.mark.django_db
+def test_user_update(api_client_with_credentials):
+    url = reverse('user-info')
+    response = api_client_with_credentials.patch(url, data={'first_name': 'another_name'})
+    assert response.status_code == 200

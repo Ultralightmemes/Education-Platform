@@ -1,12 +1,12 @@
+from rest_framework.decorators import api_view
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework import generics, status
 from rest_framework.response import Response
-from rest_framework.views import APIView
-from rest_framework_simplejwt.tokens import RefreshToken
 
 from user.models import User
 from user.serializers import RegistrationSerializer, UserSerializer
+from user.service import blacklist_token
 
 
 class RegistrationAPIView(generics.CreateAPIView):
@@ -15,7 +15,7 @@ class RegistrationAPIView(generics.CreateAPIView):
     serializer_class = RegistrationSerializer
 
 
-class UserAPIView(generics.RetrieveUpdateAPIView):
+class UserAPIView(generics.RetrieveUpdateDestroyAPIView):
     permission_classes = (IsAuthenticated, )
     serializer_class = UserSerializer
 
@@ -27,15 +27,23 @@ class UserAPIView(generics.RetrieveUpdateAPIView):
         obj = get_object_or_404(queryset, pk=self.request.user.id)
         return obj
 
-
-class LogoutAPIView(APIView):
-    permission_classes = (IsAuthenticated,)
-
-    def post(self, request):
+    def destroy(self, request, *args, **kwargs):
+        user = request.user
+        if user.is_anonymous:
+            return Response(status=status.HTTP_401_UNAUTHORIZED)
         try:
-            refresh_token = request.data["refresh_token"]
-            token = RefreshToken(refresh_token)
-            token.blacklist()
+            blacklist_token(request.data["refresh_token"])
+            user.is_active = False
+            user.save()
             return Response(status=status.HTTP_205_RESET_CONTENT)
         except Exception:
             return Response(status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+def logout_user(request):
+    try:
+        blacklist_token(request.data["refresh_token"])
+        return Response(status=status.HTTP_205_RESET_CONTENT)
+    except Exception:
+        return Response(status=status.HTTP_400_BAD_REQUEST)

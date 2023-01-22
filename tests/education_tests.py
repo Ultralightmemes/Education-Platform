@@ -30,11 +30,12 @@ def create_mock_file():
 
 
 @pytest.fixture
-def create_test_course(db, create_mock_file):
+def create_test_course(db, create_mock_file, create_default_user):
     return Course.objects.create(name='Course',
                                  is_published=True,
                                  text='text',
-                                 image=create_mock_file)
+                                 image=create_mock_file,
+                                 author=create_default_user())
 
 
 @pytest.fixture
@@ -69,24 +70,17 @@ def create_user_subscription_to_course(db, create_user, create_test_course):
 
 
 @pytest.mark.django_db
+def test_course_creation(api_client_with_teacher_role):
+    url = reverse('course-list')
+    response = api_client_with_teacher_role.post(url, data={'name': 'Course', 'text': 'Text'})
+    assert response.status_code == 201
+
+
+@pytest.mark.django_db
 def test_course_detail(api_client, create_test_course):
     url = reverse('course-detail', kwargs={'pk': create_test_course.pk})
     response = api_client.get(url)
     assert response.status_code == 200
-
-
-@pytest.mark.django_db
-def test_authorized_course_themes_with_lessons(api_client_with_credentials, create_test_lesson):
-    url = reverse('course-get-themes-with-lessons', kwargs={'pk': create_test_lesson.theme.course.pk})
-    response = api_client_with_credentials.get(url)
-    assert response.status_code == 200
-
-
-@pytest.mark.django_db
-def test_unauthorized_course_themes_with_lessons(api_client, create_test_lesson):
-    url = reverse('course-get-themes-with-lessons', kwargs={'pk': create_test_lesson.theme.course.pk})
-    response = api_client.get(url)
-    assert response.status_code == 401
 
 
 # @pytest.mark.django_db
@@ -139,3 +133,23 @@ def test_user_lesson_answer(api_client_with_credentials, create_test_lesson):
                   kwargs={'pk': create_test_lesson.pk, 'course_pk': create_test_lesson.theme.course.pk})
     response = api_client_with_credentials.post(url)
     assert response.status_code == 202
+
+
+@pytest.mark.django_db
+def test_authorized_themes_with_lessons(api_client_with_credentials, create_test_lesson):
+    url = reverse('theme-list')
+    response = api_client_with_credentials.get(url, data={'course': create_test_lesson.theme.course.pk})
+    assert response.status_code == 200
+
+
+@pytest.mark.django_db
+def test_unauthorized_themes_with_lessons(api_client, create_test_lesson):
+    url = reverse('theme-list')
+    response = api_client.get(url, data={'course': create_test_lesson.theme.course.pk})
+    assert response.status_code == 401
+
+
+# @pytest.mark.django_db
+# def test_theme_creation(api_client_with_credentials_authentication, create_test_course):
+#     url = reverse('theme-list')
+

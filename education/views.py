@@ -1,19 +1,26 @@
-from django.db import IntegrityError
+import functools
+import traceback
+
+from django.contrib.auth.models import AnonymousUser
+from django.db import IntegrityError, transaction
 from rest_framework import viewsets, status
-from rest_framework.decorators import action
+from rest_framework.decorators import action, api_view, renderer_classes
 from rest_framework.filters import SearchFilter, OrderingFilter
 from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.renderers import JSONRenderer, TemplateHTMLRenderer
 from rest_framework.response import Response
 
+from education.decorators import catch_does_not_exist
 from education.models import Course, Lesson, Theme, Category, ExerciseTask, TestTask
 from education.serializers import CourseSerializer, ThemeWithLessonSerializer, MultipleCourseSerializer, \
-    CategorySerializer, LessonDetailSerializer, AnswerSerializer, RateSerializer
+    CategorySerializer, LessonDetailSerializer, AnswerSerializer, RateSerializer, CategoryDetailSerializer, \
+    CreateCourseSerializer, ThemeSerializer, ThemeUpdateSerializer
 from education.service import calculate_course_rating, annotate_themes, annotate_courses, count_exercise_percents
 from education.tasks import send_subscribe_mail
 from user.models import User, UserCourse, UserLesson
 
 
-class CourseViewSet(viewsets.ReadOnlyModelViewSet):
+class CourseViewSet(viewsets.ModelViewSet):
     queryset = Course.objects.filter(is_published=True)
     serializer_class = CourseSerializer
     filter_backends = [SearchFilter, OrderingFilter]
@@ -32,7 +39,7 @@ class CourseViewSet(viewsets.ReadOnlyModelViewSet):
 
         return super(CourseViewSet, self).get_serializer_class()
 
-    def retrieve(self, request, pk=None):
+    def retrieve(self, request, pk=None, **kwargs):
         try:
             course = Course.objects.prefetch_related('themes', 'categories').get(pk=pk)
         except Course.DoesNotExist:
@@ -41,16 +48,40 @@ class CourseViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = CourseSerializer(course)
         return Response(serializer.data)
 
-    @action(methods=['get'], detail=True, url_path='themes')
-    def get_themes_with_lessons(self, request, pk=None):
+    def create(self, request, *args, **kwargs):
         user = request.user
-        if user.is_anonymous:
-            return Response(status=status.HTTP_401_UNAUTHORIZED)
-        themes = annotate_themes(user, pk)
-        if not themes:
+        if user.is_anonymous or not user.is_teacher:
+            return Response(status=status.HTTP_403_FORBIDDEN)
+        serializer = CreateCourseSerializer(data=request.data)
+        if serializer.is_valid() and request.data:
+            serializer.save(author=user)
+        else:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def update(self, request, pk=None, *args, **kwargs):
+        user = request.user
+        course = Course.objects.get(pk=pk)
+        if not course.author == user:
+            return Response(status=status.HTTP_403_FORBIDDEN)
+        serializer = CreateCourseSerializer(course, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+        else:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+    def destroy(self, request, pk=None, *args, **kwargs):
+        user = request.user
+        try:
+            course = Course.objects.get(pk=pk)
+        except Course.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
-        serializer = ThemeWithLessonSerializer(themes, many=True)
-        return Response(serializer.data)
+        if not course.author == user:
+            return Response(status=status.HTTP_403_FORBIDDEN)
+        course.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
 
     @action(methods=['post'], detail=True, url_path='follow')
     def follow_course(self, request, pk=None):
@@ -79,6 +110,10 @@ class CourseViewSet(viewsets.ReadOnlyModelViewSet):
 
     @action(methods=['POST'], detail=True)
     def rate(self, request, pk=None):
+        try:
+            Course.objects.get(pk=pk)
+        except Course.DoesNotExist:
+            return Response(status=status.HTTP_404_NOT_FOUND)
         user = request.user
         if user.is_anonymous:
             return Response(status=status.HTTP_401_UNAUTHORIZED)
@@ -91,7 +126,7 @@ class CourseViewSet(viewsets.ReadOnlyModelViewSet):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
-class LessonViewSet(viewsets.ReadOnlyModelViewSet):
+class LessonViewSet(viewsets.ModelViewSet):
     serializer_class = LessonDetailSerializer
     permission_classes = (IsAuthenticated,)
 
@@ -133,6 +168,12 @@ class LessonViewSet(viewsets.ReadOnlyModelViewSet):
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
 
+    # def create(self, request, course_pk=None, *args, **kwargs):
+    #     user = request.user
+    #     course = Course.objects.get(pk=course_pk)
+    #     if not course.author == user:
+    #         return Response(status=status.HTTP_403_FORBIDDEN)
+
     @action(methods=['post'], detail=True)
     def answer(self, request, pk=None, course_pk=None):
         if not Course.objects.filter(pk=course_pk).exists():
@@ -155,14 +196,71 @@ class LessonViewSet(viewsets.ReadOnlyModelViewSet):
         return Response(status=status.HTTP_202_ACCEPTED)
 
 
+# TODO maybe need to divide teacher and user api
+@api_view(['GET', 'POST'])
+@catch_does_not_exist
+def theme_api_view(request):
+    if request.method == 'GET':
+        user = request.user
+        if user.is_anonymous:
+            return Response(status=status.HTTP_401_UNAUTHORIZED)
+        themes = annotate_themes(user)
+        # TODO Need to choose what serializer to use: Theme or THemeWithLesson
+        serializer = ThemeWithLessonSerializer(themes, many=True)
+        return Response(serializer.data)
+
+    elif request.method == 'POST':
+        user = request.user
+        serializer = ThemeSerializer(data=request.data)
+        if serializer.is_valid():
+            if serializer.validated_data.get('course').author != user:
+                return Response(status=status.HTTP_403_FORBIDDEN)
+            else:
+                serializer.save()
+        else:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+@api_view(['GET', 'DELETE', 'PATCH'])
+@catch_does_not_exist
+def theme_detail_api_view(request, pk=None):
+    if request.method == 'GET':
+        theme = Theme.objects.get(pk=pk)
+        serializer = ThemeSerializer(theme)
+        return Response(serializer.data)
+
+    elif request.method == 'PATCH':
+        user = request.user
+        theme = Theme.objects.select_related('course').get(pk=pk)
+        serializer = ThemeUpdateSerializer(theme, data=request.data, partial=True)
+        if serializer.is_valid():
+            if theme.course.author != user:
+                return Response(status=status.HTTP_403_FORBIDDEN)
+            else:
+                serializer.save()
+        else:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.data)
+
+    elif request.method == 'DELETE':
+        user = request.user
+        theme = Theme.objects.select_related('course').get(pk=pk)
+        if theme.course.author != user:
+            return Response(status=status.HTTP_403_FORBIDDEN)
+        theme.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
 class CategoryViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
     permission_classes = [AllowAny]
 
-    def retrieve(self, request, pk=None):
-        objects = Course.objects.filter(categories=pk)
-        if not objects:
+    def retrieve(self, request, pk=None, **kwargs):
+        try:
+            instance = Category.objects.prefetch_related('courses').get(pk=pk)
+        except Category.DoesNotExist:
             return Response(status=status.HTTP_404_NOT_FOUND)
-        serializer = MultipleCourseSerializer(objects, many=True, context={'request': request})
+        serializer = CategoryDetailSerializer(instance, context={'request': request})
         return Response(serializer.data)

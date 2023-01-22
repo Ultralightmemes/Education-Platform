@@ -35,6 +35,7 @@ class User(AbstractUser):
     patronymic = models.CharField(max_length=255, blank=True, verbose_name='Отчество')
     is_active = models.BooleanField(default=True, verbose_name='Активен')
     is_staff = models.BooleanField(default=False, verbose_name='Работник')
+    is_teacher = models.BooleanField(default=False, verbose_name='Учитель')
     username = None
     courses = models.ManyToManyField(Course, through='UserCourse', related_name='users', verbose_name='Курсы')
     lessons = models.ManyToManyField(Lesson, through='UserLesson', related_name='users', verbose_name='Занятия')

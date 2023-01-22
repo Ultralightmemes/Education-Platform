@@ -22,6 +22,8 @@ class Course(models.Model):
     is_published = models.BooleanField(default=False, verbose_name='Опубликован')
     text = models.TextField(verbose_name='Описание')
     image = models.ImageField(upload_to='course/%Y/%m/%d', verbose_name='Изображение')
+    author = models.ForeignKey('user.User', on_delete=models.SET_NULL, blank=True, verbose_name='Автор',
+                               related_name='created_courses', null=True)
 
     class Meta:
         verbose_name = 'Курс'

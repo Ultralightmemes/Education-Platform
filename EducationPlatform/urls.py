@@ -9,7 +9,7 @@ from EducationPlatform import settings
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('education/', include('education.urls')),
-    path('users/', include('user.urls')),
+    path('user/', include('user.urls')),
     path('token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
 
