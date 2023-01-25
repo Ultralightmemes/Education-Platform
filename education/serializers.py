@@ -1,20 +1,23 @@
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
 
-from education.models import Course, Lesson, Theme, Category, ExerciseTask, TestOption, TestTask
+from education.models import Course, Lesson, Theme, Category, ExerciseTask, TestOption, TestTask, CourseCategories
 from user.models import UserCourse
 
 
 class ThemeInCourseSerializer(ModelSerializer):
     class Meta:
         model = Theme
-        exclude = ('course', 'is_published')
+        exclude = ('course',
+                   'is_published')
 
 
 class CategorySerializer(ModelSerializer):
     class Meta:
         model = Category
-        fields = ('id', 'name')
+        fields = ('id',
+                  'name'
+                  )
 
 
 class MultipleCourseSerializer(ModelSerializer):
@@ -24,7 +27,12 @@ class MultipleCourseSerializer(ModelSerializer):
 
     class Meta:
         model = Course
-        fields = ('id', 'name', 'categories', 'image', 'percents', )
+        fields = ('id',
+                  'name',
+                  'categories',
+                  'image',
+                  'percents',
+                  )
 
     def get_image(self, course):
         request = self.context.get('request')
@@ -39,11 +47,52 @@ class CategoryDetailSerializer(ModelSerializer):
         fields = '__all__'
 
 
+class CourseCategorySerializer(serializers.ModelSerializer):
+    category = CategoryDetailSerializer(read_only=True)
+    category_id = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all(),
+                                                     source='category',
+                                                     write_only=True,
+                                                     )
+
+    class Meta:
+        model = CourseCategories
+        fields = ('category',
+                  'category_id',
+                  )
+
+
 class CreateCourseSerializer(ModelSerializer):
+    categories = CourseCategorySerializer(many=True)
 
     class Meta:
         model = Course
-        exclude = ('publish_date', 'update_date', 'image', 'is_published')
+        exclude = ('publish_date',
+                   'update_date',
+                   'image',
+                   'is_published',
+                   )
+
+    def create(self, validated_data):
+        categories_data = validated_data.pop('categories')
+        course = Course.objects.create(**validated_data)
+        for category in categories_data:
+            CourseCategories.objects.create(
+                course=course,
+                category=category.get('category'),
+            )
+        return course
+
+    def update(self, instance, validated_data):
+        categories_data = validated_data.pop('categories')
+        instance = super(CreateCourseSerializer, self).update(instance, validated_data)
+        course_category = CourseCategories.objects.filter(course=instance)
+        course_category.delete()
+        for category in categories_data:
+            CourseCategories.objects.create(
+                course=instance,
+                category=category.get('category'),
+            )
+        return instance
 
 
 class CourseSerializer(ModelSerializer):
@@ -62,7 +111,12 @@ class LessonSerializer(ModelSerializer):
 
     class Meta:
         model = Lesson
-        fields = ['id', 'title', 'position', 'is_done', 'is_auto_done', ]
+        fields = ['id',
+                  'title',
+                  'position',
+                  'is_done',
+                  'is_auto_done',
+                  ]
 
 
 class ThemeWithLessonSerializer(ModelSerializer):
@@ -70,7 +124,12 @@ class ThemeWithLessonSerializer(ModelSerializer):
 
     class Meta:
         model = Theme
-        fields = ['id', 'title', 'position', 'lessons', 'course']
+        fields = ['id',
+                  'title',
+                  'position',
+                  'lessons',
+                  'course'
+                  ]
 
 
 class ThemeSerializer(ModelSerializer):
@@ -78,7 +137,11 @@ class ThemeSerializer(ModelSerializer):
 
     class Meta:
         model = Theme
-        fields = ['title', 'description', 'position', 'is_published', 'course']
+        fields = ['title',
+                  'description',
+                  'position',
+                  'is_published',
+                  ]
 
 
 class ThemeUpdateSerializer(ModelSerializer):
@@ -86,19 +149,28 @@ class ThemeUpdateSerializer(ModelSerializer):
 
     class Meta:
         model = Theme
-        fields = ['title', 'description', 'position', 'is_published']
+        fields = ['title',
+                  'description',
+                  'position',
+                  'is_published'
+                  ]
 
 
 class ExerciseTaskSerializer(ModelSerializer):
     class Meta:
         model = ExerciseTask
-        exclude = ['lesson', 'is_published', 'answer']
+        exclude = ['lesson',
+                   'is_published',
+                   'answer'
+                   ]
 
 
 class TestOptionSerializer(ModelSerializer):
     class Meta:
         model = TestOption
-        fields = ['id', 'text']
+        fields = ['id',
+                  'text'
+                  ]
 
 
 class TestTaskSerializer(ModelSerializer):
@@ -110,7 +182,9 @@ class TestTaskSerializer(ModelSerializer):
 
     class Meta:
         model = TestTask
-        exclude = ['lesson', 'is_published']
+        exclude = ['lesson',
+                   'is_published'
+                   ]
 
 
 class LessonDetailSerializer(ModelSerializer):
@@ -121,7 +195,16 @@ class LessonDetailSerializer(ModelSerializer):
 
     class Meta:
         model = Lesson
-        exclude = ['position', 'is_published']
+        exclude = ['position',
+                   'is_published'
+                   ]
+
+
+class LessonPaginationSerializer(ModelSerializer):
+
+    class Meta:
+        model = Lesson
+        exclude = ['update_date', 'is_published']
 
 
 class ExerciseAnswerSerializer(serializers.Serializer):
@@ -141,7 +224,7 @@ class AnswerSerializer(serializers.Serializer):
 
 
 class RateSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = UserCourse
-        fields = ('rating', )
+        fields = ('rating',
+                  )

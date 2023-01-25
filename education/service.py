@@ -1,4 +1,4 @@
-from django.db.models import Q, Prefetch, F
+from django.db.models import Q, Prefetch
 
 from education.models import Theme, Lesson, Course, TestTask, ExerciseTask
 from user.models import UserCourse, UserLesson
@@ -12,9 +12,9 @@ def calculate_course_rating(course):
         return 0
 
 
-def annotate_themes(user):
+def annotate_themes(user, course_pk):
     themes = Theme.objects.prefetch_related(Prefetch('lessons', Lesson.objects.filter(is_published=True))) \
-        .filter(course=F('course'), is_published=True)
+        .filter(course_id=course_pk, is_published=True)
     for theme in themes:
         for lesson in theme.lessons.all():
             lesson.is_done = check_if_lesson_is_done(lesson, user)

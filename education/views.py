@@ -1,20 +1,16 @@
-import functools
-import traceback
-
-from django.contrib.auth.models import AnonymousUser
-from django.db import IntegrityError, transaction
+from django.db import IntegrityError
 from rest_framework import viewsets, status
-from rest_framework.decorators import action, api_view, renderer_classes
+from rest_framework.decorators import action, api_view
 from rest_framework.filters import SearchFilter, OrderingFilter
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from rest_framework.renderers import JSONRenderer, TemplateHTMLRenderer
 from rest_framework.response import Response
 
 from education.decorators import catch_does_not_exist
 from education.models import Course, Lesson, Theme, Category, ExerciseTask, TestTask
 from education.serializers import CourseSerializer, ThemeWithLessonSerializer, MultipleCourseSerializer, \
     CategorySerializer, LessonDetailSerializer, AnswerSerializer, RateSerializer, CategoryDetailSerializer, \
-    CreateCourseSerializer, ThemeSerializer, ThemeUpdateSerializer
+    CreateCourseSerializer, ThemeSerializer, ThemeUpdateSerializer, LessonSerializer, LessonPaginationSerializer
 from education.service import calculate_course_rating, annotate_themes, annotate_courses, count_exercise_percents
 from education.tasks import send_subscribe_mail
 from user.models import User, UserCourse, UserLesson
@@ -64,6 +60,7 @@ class CourseViewSet(viewsets.ModelViewSet):
         course = Course.objects.get(pk=pk)
         if not course.author == user:
             return Response(status=status.HTTP_403_FORBIDDEN)
+        # TODO Need to change serializer
         serializer = CreateCourseSerializer(course, data=request.data, partial=True)
         if serializer.is_valid():
             serializer.save()
@@ -81,7 +78,6 @@ class CourseViewSet(viewsets.ModelViewSet):
             return Response(status=status.HTTP_403_FORBIDDEN)
         course.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-
 
     @action(methods=['post'], detail=True, url_path='follow')
     def follow_course(self, request, pk=None):
@@ -126,6 +122,7 @@ class CourseViewSet(viewsets.ModelViewSet):
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
+# TODO Rewrite to api_view and make teacher api
 class LessonViewSet(viewsets.ModelViewSet):
     serializer_class = LessonDetailSerializer
     permission_classes = (IsAuthenticated,)
@@ -173,7 +170,7 @@ class LessonViewSet(viewsets.ModelViewSet):
     #     course = Course.objects.get(pk=course_pk)
     #     if not course.author == user:
     #         return Response(status=status.HTTP_403_FORBIDDEN)
-
+    # TODO Maybe needed to be rewritten
     @action(methods=['post'], detail=True)
     def answer(self, request, pk=None, course_pk=None):
         if not Course.objects.filter(pk=course_pk).exists():
@@ -196,60 +193,22 @@ class LessonViewSet(viewsets.ModelViewSet):
         return Response(status=status.HTTP_202_ACCEPTED)
 
 
-# TODO maybe need to divide teacher and user api
-@api_view(['GET', 'POST'])
+@api_view(['GET'])
 @catch_does_not_exist
-def theme_api_view(request):
+def user_lesson_api_view(request, course_pk=None):
     if request.method == 'GET':
         user = request.user
-        if user.is_anonymous:
-            return Response(status=status.HTTP_401_UNAUTHORIZED)
-        themes = annotate_themes(user)
-        # TODO Need to choose what serializer to use: Theme or THemeWithLesson
-        serializer = ThemeWithLessonSerializer(themes, many=True)
-        return Response(serializer.data)
-
-    elif request.method == 'POST':
-        user = request.user
-        serializer = ThemeSerializer(data=request.data)
-        if serializer.is_valid():
-            if serializer.validated_data.get('course').author != user:
-                return Response(status=status.HTTP_403_FORBIDDEN)
-            else:
-                serializer.save()
-        else:
-            return Response(status=status.HTTP_400_BAD_REQUEST)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-
-@api_view(['GET', 'DELETE', 'PATCH'])
-@catch_does_not_exist
-def theme_detail_api_view(request, pk=None):
-    if request.method == 'GET':
-        theme = Theme.objects.get(pk=pk)
-        serializer = ThemeSerializer(theme)
-        return Response(serializer.data)
-
-    elif request.method == 'PATCH':
-        user = request.user
-        theme = Theme.objects.select_related('course').get(pk=pk)
-        serializer = ThemeUpdateSerializer(theme, data=request.data, partial=True)
-        if serializer.is_valid():
-            if theme.course.author != user:
-                return Response(status=status.HTTP_403_FORBIDDEN)
-            else:
-                serializer.save()
-        else:
-            return Response(status=status.HTTP_400_BAD_REQUEST)
-        return Response(serializer.data)
-
-    elif request.method == 'DELETE':
-        user = request.user
-        theme = Theme.objects.select_related('course').get(pk=pk)
-        if theme.course.author != user:
+        paginator = PageNumberPagination()
+        paginator.page_size = 1
+        course = Course.objects.get(pk=course_pk)
+        if course not in user.courses.all():
             return Response(status=status.HTTP_403_FORBIDDEN)
-        theme.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
+        lessons = Lesson.objects.select_related('theme').order_by('theme__position', 'position').filter(
+            theme__course=course,
+            is_published=True)
+        result_page = paginator.paginate_queryset(lessons, request)
+        serializer = LessonPaginationSerializer(result_page, many=True)
+        return paginator.get_paginated_response(serializer.data)
 
 
 class CategoryViewSet(viewsets.ReadOnlyModelViewSet):

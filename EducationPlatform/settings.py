@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'education',
+    'teacher',
     'adminsortable2',
     'user.apps.UserConfig',
     'rest_framework_simplejwt',

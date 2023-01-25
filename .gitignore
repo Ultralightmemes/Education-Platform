@@ -9,3 +9,4 @@ dump.rdb
 .env
 .coverage
 .pytest_cache
+pytest.ini

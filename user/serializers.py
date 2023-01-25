@@ -12,7 +12,11 @@ class RegistrationSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['email', 'first_name', 'last_name', 'password']
+        fields = ['email',
+                  'first_name',
+                  'last_name',
+                  'password'
+                  ]
 
     def create(self, validated_data):
         return User.objects.create_user(**validated_data)
@@ -23,7 +27,13 @@ class UserSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = User
-        fields = ['email', 'first_name', 'last_name', 'patronymic', 'image', 'is_staff']
+        fields = ['email',
+                  'first_name',
+                  'last_name',
+                  'patronymic',
+                  'image',
+                  'is_staff'
+                  ]
 
 
 class ImageSerializer(serializers.ModelSerializer):
