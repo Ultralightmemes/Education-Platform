@@ -1,3 +1,5 @@
+import functools
+
 from django.db.models import Q, Prefetch
 
 from education.models import Theme, Lesson, Course, TestTask, ExerciseTask

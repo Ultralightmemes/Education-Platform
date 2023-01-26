@@ -61,40 +61,6 @@ class CourseCategorySerializer(serializers.ModelSerializer):
                   )
 
 
-class CreateCourseSerializer(ModelSerializer):
-    categories = CourseCategorySerializer(many=True)
-
-    class Meta:
-        model = Course
-        exclude = ('publish_date',
-                   'update_date',
-                   'image',
-                   'is_published',
-                   )
-
-    def create(self, validated_data):
-        categories_data = validated_data.pop('categories')
-        course = Course.objects.create(**validated_data)
-        for category in categories_data:
-            CourseCategories.objects.create(
-                course=course,
-                category=category.get('category'),
-            )
-        return course
-
-    def update(self, instance, validated_data):
-        categories_data = validated_data.pop('categories')
-        instance = super(CreateCourseSerializer, self).update(instance, validated_data)
-        course_category = CourseCategories.objects.filter(course=instance)
-        course_category.delete()
-        for category in categories_data:
-            CourseCategories.objects.create(
-                course=instance,
-                category=category.get('category'),
-            )
-        return instance
-
-
 class CourseSerializer(ModelSerializer):
     themes = ThemeInCourseSerializer(many=True)
     categories = CategorySerializer(many=True)
@@ -129,30 +95,6 @@ class ThemeWithLessonSerializer(ModelSerializer):
                   'position',
                   'lessons',
                   'course'
-                  ]
-
-
-class ThemeSerializer(ModelSerializer):
-    position = serializers.IntegerField(required=False)
-
-    class Meta:
-        model = Theme
-        fields = ['title',
-                  'description',
-                  'position',
-                  'is_published',
-                  ]
-
-
-class ThemeUpdateSerializer(ModelSerializer):
-    position = serializers.IntegerField(required=False)
-
-    class Meta:
-        model = Theme
-        fields = ['title',
-                  'description',
-                  'position',
-                  'is_published'
                   ]
 
 

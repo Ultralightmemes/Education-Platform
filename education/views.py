@@ -6,23 +6,22 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 
-from education.decorators import catch_does_not_exist
+from education.decorators import catch_does_not_exist, check_user_subscription_to_course
 from education.models import Course, Lesson, Theme, Category, ExerciseTask, TestTask
-from education.serializers import CourseSerializer, ThemeWithLessonSerializer, MultipleCourseSerializer, \
-    CategorySerializer, LessonDetailSerializer, AnswerSerializer, RateSerializer, CategoryDetailSerializer, \
-    CreateCourseSerializer, ThemeSerializer, ThemeUpdateSerializer, LessonSerializer, LessonPaginationSerializer
-from education.service import calculate_course_rating, annotate_themes, annotate_courses, count_exercise_percents
+from education.serializers import CourseSerializer, MultipleCourseSerializer, CategorySerializer, \
+    LessonPaginationSerializer, ThemeWithLessonSerializer, RateSerializer, LessonDetailSerializer, AnswerSerializer, \
+    CategoryDetailSerializer
+from education.service import calculate_course_rating, annotate_courses, count_exercise_percents, annotate_themes
 from education.tasks import send_subscribe_mail
 from user.models import User, UserCourse, UserLesson
 
 
-class CourseViewSet(viewsets.ModelViewSet):
+class CourseViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Course.objects.filter(is_published=True)
-    serializer_class = CourseSerializer
-    filter_backends = [SearchFilter, OrderingFilter]
     search_fields = ['name']
     ordering_fields = ['name']
     permission_classes = [AllowAny]
+    filter_backends = [SearchFilter, OrderingFilter]
 
     action_serializers = {
         'retrieve': CourseSerializer,
@@ -35,51 +34,15 @@ class CourseViewSet(viewsets.ModelViewSet):
 
         return super(CourseViewSet, self).get_serializer_class()
 
-    def retrieve(self, request, pk=None, **kwargs):
-        try:
-            course = Course.objects.prefetch_related('themes', 'categories').get(pk=pk)
-        except Course.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+    @catch_does_not_exist
+    def retrieve(self, request, pk=None, *args, **kwargs):
+        course = Course.objects.prefetch_related('themes', 'categories').get(pk=pk)
         course.rating = calculate_course_rating(course)
         serializer = CourseSerializer(course)
         return Response(serializer.data)
 
-    def create(self, request, *args, **kwargs):
-        user = request.user
-        if user.is_anonymous or not user.is_teacher:
-            return Response(status=status.HTTP_403_FORBIDDEN)
-        serializer = CreateCourseSerializer(data=request.data)
-        if serializer.is_valid() and request.data:
-            serializer.save(author=user)
-        else:
-            return Response(status=status.HTTP_400_BAD_REQUEST)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-    def update(self, request, pk=None, *args, **kwargs):
-        user = request.user
-        course = Course.objects.get(pk=pk)
-        if not course.author == user:
-            return Response(status=status.HTTP_403_FORBIDDEN)
-        # TODO Need to change serializer
-        serializer = CreateCourseSerializer(course, data=request.data, partial=True)
-        if serializer.is_valid():
-            serializer.save()
-        else:
-            return Response(status=status.HTTP_400_BAD_REQUEST)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-    def destroy(self, request, pk=None, *args, **kwargs):
-        user = request.user
-        try:
-            course = Course.objects.get(pk=pk)
-        except Course.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
-        if not course.author == user:
-            return Response(status=status.HTTP_403_FORBIDDEN)
-        course.delete()
-        return Response(status=status.HTTP_204_NO_CONTENT)
-
     @action(methods=['post'], detail=True, url_path='follow')
+    @catch_does_not_exist
     def follow_course(self, request, pk=None):
         user = request.user
         if user.is_anonymous:
@@ -105,11 +68,9 @@ class CourseViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
     @action(methods=['POST'], detail=True)
+    @catch_does_not_exist
     def rate(self, request, pk=None):
-        try:
-            Course.objects.get(pk=pk)
-        except Course.DoesNotExist:
-            return Response(status=status.HTTP_404_NOT_FOUND)
+        Course.objects.get(pk=pk)
         user = request.user
         if user.is_anonymous:
             return Response(status=status.HTTP_401_UNAUTHORIZED)
@@ -165,11 +126,6 @@ class LessonViewSet(viewsets.ModelViewSet):
         serializer = self.get_serializer(instance)
         return Response(serializer.data)
 
-    # def create(self, request, course_pk=None, *args, **kwargs):
-    #     user = request.user
-    #     course = Course.objects.get(pk=course_pk)
-    #     if not course.author == user:
-    #         return Response(status=status.HTTP_403_FORBIDDEN)
     # TODO Maybe needed to be rewritten
     @action(methods=['post'], detail=True)
     def answer(self, request, pk=None, course_pk=None):
@@ -191,6 +147,16 @@ class LessonViewSet(viewsets.ModelViewSet):
         user_lesson.is_done = True
         user_lesson.save()
         return Response(status=status.HTTP_202_ACCEPTED)
+
+
+@api_view(["GET"])
+@catch_does_not_exist
+@check_user_subscription_to_course
+def user_theme_api_view(request, course_pk=None):
+    user = request.user
+    themes = annotate_themes(user, course_pk)
+    serializer = ThemeWithLessonSerializer(themes, many=True)
+    return Response(serializer.data)
 
 
 @api_view(['GET'])

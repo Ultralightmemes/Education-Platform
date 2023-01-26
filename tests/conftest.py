@@ -42,7 +42,7 @@ def create_default_user(db, django_user_model, test_password):
     def make_user(**kwargs):
         kwargs['password'] = test_password
         if 'email' not in kwargs:
-            kwargs['email'] = 'test_email@email.com'
+            kwargs['email'] = str(uuid.uuid4().time_low) + '@email.com'
         kwargs['first_name'] = str(uuid.uuid4().time_low)
         kwargs['last_name'] = str(uuid.uuid4().time_low)
         return django_user_model.objects.create_user(**kwargs)
@@ -124,3 +124,10 @@ def create_test_category(db, create_test_course):
 @pytest.fixture
 def create_user_subscription_to_course(db, create_user, create_test_course):
     return UserCourse.objects.create(user=create_user(), course=create_test_course)
+
+
+@pytest.fixture
+def user_with_course_subscription(api_client_with_credentials_authentication, create_test_theme, create_default_user):
+    user = create_default_user()
+    UserCourse.objects.create(course_id=create_test_theme.course.id, user=user)
+    return api_client_with_credentials_authentication(user), create_test_theme.course.id

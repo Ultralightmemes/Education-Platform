@@ -17,11 +17,11 @@ class Category(models.Model):
 
 class Course(models.Model):
     name = models.CharField(max_length=255, verbose_name='Название')
-    publish_date = models.DateField(default=timezone.now, verbose_name='Создан')
+    publish_date = models.DateField(default=timezone.now().date, verbose_name='Создан')
     update_date = models.DateField(auto_now=True, verbose_name='Обновлён')
     is_published = models.BooleanField(default=False, verbose_name='Опубликован')
     text = models.TextField(verbose_name='Описание')
-    image = models.ImageField(upload_to='course/%Y/%m/%d', verbose_name='Изображение')
+    image = models.ImageField(upload_to='course/%Y/%m/%d', verbose_name='Изображение', default='course/Ruby.png')
     author = models.ForeignKey('user.User', on_delete=models.SET_NULL, blank=True, verbose_name='Автор',
                                related_name='created_courses', null=True)
 
