@@ -15,6 +15,11 @@ class Category(models.Model):
         return self.name
 
 
+class PublishedCoursesManager(models.Manager):
+    def get_queryset(self):
+        return super().get_queryset().filter(is_published=True)
+
+
 class Course(models.Model):
     name = models.CharField(max_length=255, verbose_name='Название')
     publish_date = models.DateField(default=timezone.now().date, verbose_name='Создан')
@@ -24,6 +29,8 @@ class Course(models.Model):
     image = models.ImageField(upload_to='course/%Y/%m/%d', verbose_name='Изображение', default='course/Ruby.png')
     author = models.ForeignKey('user.User', on_delete=models.SET_NULL, blank=True, verbose_name='Автор',
                                related_name='created_courses', null=True)
+    objects = models.Manager()
+    published = PublishedCoursesManager()
 
     class Meta:
         verbose_name = 'Курс'

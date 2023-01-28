@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
 
-from education.models import Course, CourseCategories, Category, Theme
+from education.models import Course, CourseCategories, Category, Theme, Lesson
 from education.serializers import CategorySerializer
 
 
@@ -103,3 +103,19 @@ class ThemeSerializer(ModelSerializer):
                   'is_published',
                   'num_lessons',
                   ]
+
+
+class CreateLessonSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Lesson
+        exclude = ('theme',
+                   'update_date',
+                   )
+
+
+class LessonSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = Lesson
+        fields = '__all__'

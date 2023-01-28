@@ -6,6 +6,7 @@ from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 
+from common.service import get_object, get_or_create_object, filter_objects
 from education.decorators import catch_does_not_exist, check_user_subscription_to_course
 from education.models import Course, Lesson, Theme, Category, ExerciseTask, TestTask
 from education.serializers import CourseSerializer, MultipleCourseSerializer, CategorySerializer, \
@@ -17,7 +18,7 @@ from user.models import User, UserCourse, UserLesson
 
 
 class CourseViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Course.objects.filter(is_published=True)
+    queryset = Course.published.all()
     search_fields = ['name']
     ordering_fields = ['name']
     permission_classes = [AllowAny]
@@ -36,7 +37,7 @@ class CourseViewSet(viewsets.ReadOnlyModelViewSet):
 
     @catch_does_not_exist
     def retrieve(self, request, pk=None, *args, **kwargs):
-        course = Course.objects.prefetch_related('themes', 'categories').get(pk=pk)
+        course = get_object(Course.objects, prefetch_related=('themes', 'categories'), pk=pk)
         course.rating = calculate_course_rating(course)
         serializer = CourseSerializer(course)
         return Response(serializer.data)
@@ -47,9 +48,10 @@ class CourseViewSet(viewsets.ReadOnlyModelViewSet):
         user = request.user
         if user.is_anonymous:
             return Response(status=status.HTTP_401_UNAUTHORIZED)
-        user = User.objects.get(email=user.email)
+        user = get_object(User.objects, email=user.email)
         try:
-            user_course_obj, created = UserCourse.objects.get_or_create(user=user, course_id=pk)
+            user_course_obj, created = get_or_create_object(UserCourse.objects, user=user, course_id=pk)
+            # user_course_obj, created = UserCourse.objects.get_or_create(user=user, course_id=pk)
             if not created:
                 return Response(status=status.HTTP_204_NO_CONTENT)
         except IntegrityError:
@@ -70,11 +72,11 @@ class CourseViewSet(viewsets.ReadOnlyModelViewSet):
     @action(methods=['POST'], detail=True)
     @catch_does_not_exist
     def rate(self, request, pk=None):
-        Course.objects.get(pk=pk)
+        get_object(Course.objects, pk=pk)
         user = request.user
         if user.is_anonymous:
             return Response(status=status.HTTP_401_UNAUTHORIZED)
-        instance = UserCourse.objects.get(course_id=pk, user=user)
+        instance = get_object(UserCourse.objects, course_id=pk, user=user)
         serializer = RateSerializer(data=request.data, instance=instance)
         if serializer.is_valid():
             serializer.save()
@@ -93,7 +95,7 @@ class LessonViewSet(viewsets.ModelViewSet):
             'theme__position', 'position')
 
     def list(self, request, course_pk=None, *args, **kwargs):
-        if not Course.objects.filter(pk=course_pk).exists():
+        if not filter_objects(Course.objects, pk=course_pk).exists():
             return Response(status=status.HTTP_404_NOT_FOUND)
         instance = self.get_queryset().first()
         if not instance:

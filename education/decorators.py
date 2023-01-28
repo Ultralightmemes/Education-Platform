@@ -6,6 +6,7 @@ from django.db import transaction
 from rest_framework.exceptions import PermissionDenied
 from rest_framework.response import Response
 
+from common.service import get_object
 from user.models import UserCourse
 
 
@@ -35,7 +36,7 @@ def check_user_subscription_to_course(fn):
     @functools.wraps(fn)
     def inner(request, *args, **kwargs):
         try:
-            UserCourse.objects.get(course_id=kwargs.get('course_pk'), user=request.user)
+            get_object(UserCourse.objects, course_id=kwargs.get('course_pk'), user=request.user)
         except UserCourse.DoesNotExist:
             return error_response(PermissionDenied, 403)
         else:
