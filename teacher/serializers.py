@@ -1,7 +1,9 @@
+from django.db.models import Max
+from django.db.models.functions import Coalesce
 from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
 
-from education.models import Course, CourseCategories, Category, Theme, Lesson
+from education.models import Course, CourseCategories, Category, Theme, Lesson, ExerciseTask, Task, TestTask
 from education.serializers import CategorySerializer
 
 
@@ -16,7 +18,6 @@ class CourseListSerializer(ModelSerializer):
 
 
 class CategoryDetailSerializer(ModelSerializer):
-
     class Meta:
         model = Category
         fields = '__all__'
@@ -76,7 +77,7 @@ class CourseDetailSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Course
-        exclude = ('author', )
+        exclude = ('author',)
 
 
 class ThemeUpdateSerializer(ModelSerializer):
@@ -95,6 +96,13 @@ class ThemeSerializer(ModelSerializer):
     position = serializers.IntegerField(required=False)
     num_lessons = serializers.IntegerField(required=False, read_only=True)
 
+    def create(self, validated_data):
+        obj = Theme.objects.create(**validated_data)
+        obj.position = Theme.objects.filter(course=obj.course).aggregate(position=Coalesce(Max('position'), 0)).get(
+            'position') + 1
+        obj.save()
+        return obj
+
     class Meta:
         model = Theme
         fields = ['title',
@@ -107,6 +115,13 @@ class ThemeSerializer(ModelSerializer):
 
 class CreateLessonSerializer(serializers.ModelSerializer):
 
+    def create(self, validated_data):
+        obj = Lesson.objects.create(**validated_data)
+        obj.position = Lesson.objects.filter(theme=obj.theme).aggregate(position=Coalesce(Max('position'), 0)).get(
+            'position') + 1
+        obj.save()
+        return obj
+
     class Meta:
         model = Lesson
         exclude = ('theme',
@@ -115,7 +130,55 @@ class CreateLessonSerializer(serializers.ModelSerializer):
 
 
 class LessonSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = Lesson
         fields = '__all__'
+
+
+class ExerciseSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ExerciseTask
+        fields = '__all__'
+
+
+class CreateExerciseSerializer(serializers.ModelSerializer):
+
+    def create(self, validated_data):
+        obj = ExerciseTask.objects.create(**validated_data)
+        obj.classname = obj.__class__.__name__
+        obj.position = Task.objects.filter(lesson=obj.lesson).aggregate(position=Coalesce(Max('position'), 0)) \
+                           .get('position') + 1
+        obj.save()
+        return obj
+
+    class Meta:
+        model = ExerciseTask
+        exclude = ('classname',
+                   'lesson',
+                   'position',
+                   )
+
+
+class TestTaskSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = TestTask
+        fields = '__all__'
+
+
+class CreateTestTaskSerializer(serializers.ModelSerializer):
+
+    def create(self, validated_data):
+        obj = TestTask.objects.create(**validated_data)
+        obj.classname = obj.__class__.__name__
+        obj.position = Task.objects.filter(lesson=obj.lesson).aggregate(position=Coalesce(Max('position'), 0)) \
+                           .get('position') + 1
+        obj.save()
+        return obj
+
+    class Meta:
+        model = TestTask
+        exclude = ('classname',
+                   'position',
+                   'lesson',
+                   )

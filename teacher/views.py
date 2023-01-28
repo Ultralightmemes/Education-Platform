@@ -3,13 +3,15 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
-from common.service import filter_objects, get_all_objects, get_object, delete_object
+from common.service import filter_objects, get_object, delete_object
 from education.decorators import catch_does_not_exist
-from education.models import Course, Theme, Lesson
+from education.models import Course, Theme, Lesson, ExerciseTask, TestTask
 from education.service import calculate_course_rating
-from teacher.decorators import check_is_theme_author, check_is_course_author, check_is_lesson_author
+from teacher.decorators import check_is_theme_author, check_is_course_author, check_is_lesson_author, \
+    check_is_task_author
 from teacher.serializers import CourseListSerializer, CreateCourseSerializer, CourseDetailSerializer, \
-    ThemeUpdateSerializer, ThemeSerializer, CreateLessonSerializer, LessonSerializer
+    ThemeUpdateSerializer, ThemeSerializer, CreateLessonSerializer, LessonSerializer, ExerciseSerializer, \
+    CreateExerciseSerializer, TestTaskSerializer, CreateTestTaskSerializer
 from teacher.service import TeacherPermission, get_themes_with_lessons_counted
 
 
@@ -114,7 +116,7 @@ def lesson_api_view(request, theme_pk=None):
             serializer.save(theme=theme)
         else:
             return Response(status=status.HTTP_400_BAD_REQUEST)
-        return Response(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 @api_view(['GET', 'DELETE', 'PATCH'])
@@ -138,3 +140,89 @@ def lesson_detail_api_view(request, pk=None):
     elif request.method == 'DELETE':
         delete_object(Lesson.objects, pk=pk)
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(['GET', 'POST'])
+@catch_does_not_exist
+@check_is_task_author
+def exercise_task_api_view(request, lesson_pk=None):
+    if request.method == 'GET':
+        exercises = filter_objects(ExerciseTask.objects, lesson_id=lesson_pk)
+        serializer = ExerciseSerializer(exercises, many=True)
+        return Response(serializer.data)
+
+    elif request.method == 'POST':
+        lesson = get_object(Lesson.objects, pk=lesson_pk)
+        serializer = CreateExerciseSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(lesson=lesson)
+        else:
+            print(serializer.errors)
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+@api_view(['GET', 'PATCH', 'DELETE'])
+@catch_does_not_exist
+@check_is_task_author
+def exercise_task_detail_api_view(request, pk=None):
+    if request.method == 'GET':
+        exercise = get_object(ExerciseTask.objects, pk=pk)
+        serializer = ExerciseSerializer(exercise)
+        return Response(serializer.data)
+
+    elif request.method == 'PATCH':
+        exercise = get_object(ExerciseTask.objects, pk=pk)
+        serializer = CreateExerciseSerializer(exercise, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+        else:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.data)
+
+    elif request.method == 'DELETE':
+        delete_object(ExerciseTask.objects, pk=pk)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+@api_view(['GET', 'POST'])
+@catch_does_not_exist
+@check_is_task_author
+def test_task_api_view(request, lesson_pk=None):
+    if request.method == 'GET':
+        tests = filter_objects(TestTask.objects, lesson_id=lesson_pk)
+        serializer = TestTaskSerializer(tests, many=True)
+        return Response(serializer.data)
+
+    elif request.method == 'POST':
+        lesson = get_object(Lesson.objects, pk=lesson_pk)
+        serializer = CreateTestTaskSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(lesson=lesson)
+        else:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+@api_view(['GET', 'DELETE', 'PATCH'])
+@catch_does_not_exist
+@check_is_task_author
+def test_task_detail_api_view(request, pk=None):
+    if request.method == 'GET':
+        test = get_object(TestTask.objects, pk=pk)
+        serializer = TestTaskSerializer(test)
+        return Response(serializer.data)
+
+    elif request.method == 'PATCH':
+        test = get_object(TestTask.objects, pk=pk)
+        serializer = CreateTestTaskSerializer(test, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+        else:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.data)
+
+    elif request.method == 'DELETE':
+        delete_object(TestTask.objects, pk=pk)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+

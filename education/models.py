@@ -1,3 +1,5 @@
+from datetime import date
+
 from django.db import models
 from django.utils import timezone
 
@@ -22,7 +24,7 @@ class PublishedCoursesManager(models.Manager):
 
 class Course(models.Model):
     name = models.CharField(max_length=255, verbose_name='Название')
-    publish_date = models.DateField(default=timezone.now().date, verbose_name='Создан')
+    publish_date = models.DateField(default=date.today, verbose_name='Создан')
     update_date = models.DateField(auto_now=True, verbose_name='Обновлён')
     is_published = models.BooleanField(default=False, verbose_name='Опубликован')
     text = models.TextField(verbose_name='Описание')
@@ -87,7 +89,7 @@ class Lesson(models.Model):
 class Task(models.Model):
     title = models.CharField(max_length=255, verbose_name='Название')
     lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE, verbose_name='Урок', related_name='tasks')
-    position = models.PositiveSmallIntegerField(verbose_name='Позиция')
+    position = models.PositiveSmallIntegerField(verbose_name='Позиция', null=True)
     text = models.TextField(verbose_name='Текст')
     classname = models.CharField(max_length=255, verbose_name='Тип класса')
     is_published = models.BooleanField(default=False, verbose_name='Опубликован')

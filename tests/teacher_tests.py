@@ -113,7 +113,7 @@ def test_lesson_creation(api_client_with_credentials_authentication, create_test
                                           'text': 'text',
                                           'is_published': True,
                                           })
-    assert response.status_code == 200
+    assert response.status_code == 201
 
 
 def test_lesson_update(api_client_with_credentials_authentication, create_test_lesson):
@@ -126,5 +126,89 @@ def test_lesson_update(api_client_with_credentials_authentication, create_test_l
 def test_lesson_delete(api_client_with_credentials_authentication, create_test_lesson):
     url = reverse('teacher-lesson-detail', kwargs={'pk': create_test_lesson.pk})
     api_client = api_client_with_credentials_authentication(create_test_lesson.theme.course.author)
+    response = api_client.delete(url)
+    assert response.status_code == 204
+
+
+def test_exercise_task_detail(api_client_with_credentials_authentication, create_test_exercise):
+    url = reverse('teacher-exercise-detail', kwargs={'pk': create_test_exercise.pk})
+    api_client = api_client_with_credentials_authentication(create_test_exercise.lesson.theme.course.author)
+    response = api_client.get(url)
+    assert response.status_code == 200
+
+
+def test_exercise_task_list(api_client_with_credentials_authentication, create_test_exercise):
+    url = reverse('teacher-exercise', kwargs={'lesson_pk': create_test_exercise.lesson.pk})
+    api_client = api_client_with_credentials_authentication(create_test_exercise.lesson.theme.course.author)
+    response = api_client.get(url)
+    assert response.status_code == 200
+
+
+def test_exercise_task_creation(api_client_with_credentials_authentication, create_test_lesson):
+    url = reverse('teacher-exercise', kwargs={'lesson_pk': create_test_lesson.pk})
+    api_client = api_client_with_credentials_authentication(create_test_lesson.theme.course.author)
+    response = api_client.post(url, data={'title': 'title',
+                                          'text': 'text',
+                                          'is_published': True,
+                                          'answer': 'answer',
+                                          })
+    assert response.status_code == 201
+
+
+def test_exercise_task_update(api_client_with_credentials_authentication, create_test_exercise):
+    url = reverse('teacher-exercise-detail', kwargs={'pk': create_test_exercise.pk})
+    api_client = api_client_with_credentials_authentication(create_test_exercise.lesson.theme.course.author)
+    response = api_client.patch(url, data={'title': 'title1',
+                                           'text': 'text1',
+                                           'is_published': True,
+                                           'answer': 'answer1',
+                                           })
+    assert response.status_code == 200
+
+
+def test_exercise_task_delete(api_client_with_credentials_authentication, create_test_exercise):
+    url = reverse('teacher-exercise-detail', kwargs={'pk': create_test_exercise.pk})
+    api_client = api_client_with_credentials_authentication(create_test_exercise.lesson.theme.course.author)
+    response = api_client.delete(url)
+    assert response.status_code == 204
+
+
+def test_test_task_detail(api_client_with_credentials_authentication, create_test_test):
+    url = reverse('teacher-test-detail', kwargs={'pk': create_test_test.pk})
+    api_client = api_client_with_credentials_authentication(create_test_test.lesson.theme.course.author)
+    response = api_client.get(url)
+    assert response.status_code == 200
+
+
+def test_test_task_list(api_client_with_credentials_authentication, create_test_test):
+    url = reverse('teacher-test', kwargs={'lesson_pk': create_test_test.lesson.pk})
+    api_client = api_client_with_credentials_authentication(create_test_test.lesson.theme.course.author)
+    response = api_client.get(url)
+    assert response.status_code == 200
+
+
+def test_test_task_creation(api_client_with_credentials_authentication, create_test_lesson):
+    url = reverse('teacher-test', kwargs={'lesson_pk': create_test_lesson.pk})
+    api_client = api_client_with_credentials_authentication(create_test_lesson.theme.course.author)
+    response = api_client.post(url, data={'title': 'title',
+                                          'text': 'text',
+                                          'is_published': True,
+                                          })
+    assert response.status_code == 201
+
+
+def test_test_task_update(api_client_with_credentials_authentication, create_test_test):
+    url = reverse('teacher-test-detail', kwargs={'pk': create_test_test.pk})
+    api_client = api_client_with_credentials_authentication(create_test_test.lesson.theme.course.author)
+    response = api_client.patch(url, data={'title': 'title1',
+                                           'text': 'text1',
+                                           'is_published': True,
+                                           })
+    assert response.status_code == 200
+
+
+def test_test_task_delete(api_client_with_credentials_authentication, create_test_test):
+    url = reverse('teacher-test-detail', kwargs={'pk': create_test_test.pk})
+    api_client = api_client_with_credentials_authentication(create_test_test.lesson.theme.course.author)
     response = api_client.delete(url)
     assert response.status_code == 204
