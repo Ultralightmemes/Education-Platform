@@ -212,3 +212,19 @@ def test_test_task_delete(api_client_with_credentials_authentication, create_tes
     api_client = api_client_with_credentials_authentication(create_test_test.lesson.theme.course.author)
     response = api_client.delete(url)
     assert response.status_code == 204
+
+
+def test_option_delete(api_client_with_credentials_authentication, create_test_option):
+    url = reverse('teacher-option-detail', kwargs={'pk': create_test_option.pk})
+    api_client = api_client_with_credentials_authentication(create_test_option.test.lesson.theme.course.author)
+    response = api_client.delete(url)
+    assert response.status_code == 204
+
+
+def test_option_update(api_client_with_credentials_authentication, create_test_option):
+    url = reverse('teacher-option-detail', kwargs={'pk': create_test_option.pk})
+    api_client = api_client_with_credentials_authentication(create_test_option.test.lesson.theme.course.author)
+    response = api_client.patch(url, data={'text': 'new_text',
+                                           'is_true': True,
+                                           })
+    assert response.status_code == 200

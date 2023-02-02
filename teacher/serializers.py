@@ -1,9 +1,10 @@
 from django.db.models import Max
 from django.db.models.functions import Coalesce
 from rest_framework import serializers
+from rest_framework.exceptions import ValidationError
 from rest_framework.serializers import ModelSerializer
 
-from education.models import Course, CourseCategories, Category, Theme, Lesson, ExerciseTask, Task, TestTask
+from education.models import Course, CourseCategories, Category, Theme, Lesson, ExerciseTask, Task, TestTask, TestOption
 from education.serializers import CategorySerializer
 
 
@@ -166,15 +167,47 @@ class TestTaskSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 
+class CreateOptionSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TestOption
+        exclude = ('test',)
+
+
 class CreateTestTaskSerializer(serializers.ModelSerializer):
+    options = CreateOptionSerializer(many=True, required=False)
 
     def create(self, validated_data):
+        try:
+            options = validated_data.pop('options')
+        except KeyError:
+            options = None
         obj = TestTask.objects.create(**validated_data)
         obj.classname = obj.__class__.__name__
         obj.position = Task.objects.filter(lesson=obj.lesson).aggregate(position=Coalesce(Max('position'), 0)) \
                            .get('position') + 1
+        if options:
+            option_serializer = CreateOptionSerializer(data=options, many=True)
+            if option_serializer.is_valid():
+                option_serializer.save(test=obj)
+            else:
+                raise ValidationError
         obj.save()
         return obj
+
+    def update(self, instance, validated_data):
+        try:
+            options = validated_data.pop('options')
+        except KeyError:
+            options = None
+        instance = super(CreateTestTaskSerializer, self).update(instance, validated_data)
+        if options:
+            option_serializer = CreateOptionSerializer(data=options, many=True)
+            if option_serializer.is_valid():
+                option_serializer.save(test=instance)
+            else:
+                raise ValidationError
+        instance.save()
+        return instance
 
     class Meta:
         model = TestTask
@@ -182,3 +215,10 @@ class CreateTestTaskSerializer(serializers.ModelSerializer):
                    'position',
                    'lesson',
                    )
+
+
+class TestOptionSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = TestOption
+        fields = '__all__'

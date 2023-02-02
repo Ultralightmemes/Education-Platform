@@ -5,7 +5,7 @@ from rest_framework.exceptions import PermissionDenied
 
 from common.service import get_object
 from education.decorators import error_response
-from education.models import Course, Theme, Lesson, Task
+from education.models import Course, Theme, Lesson, Task, TestOption
 
 
 def check_is_lesson_author(fn):
@@ -67,7 +67,23 @@ def check_is_task_author(fn):
             if 'lesson_pk' in kwargs:
                 course = get_object(Lesson.objects, select_related=('theme',), pk=kwargs.get('lesson_pk')).theme.course
             else:
-                course = get_object(Task.objects, select_related=('lesson', ), pk=kwargs.get('pk')).lesson.theme.course
+                course = get_object(Task.objects, select_related=('lesson',), pk=kwargs.get('pk')).lesson.theme.course
+        except ObjectDoesNotExist as e:
+            return error_response(e, 404)
+        if request.user == course.author:
+            return fn(request, *args, **kwargs)
+        else:
+            return error_response(PermissionDenied, 403)
+
+    return inner
+
+
+def check_if_option_author(fn):
+    @functools.wraps(fn)
+    def inner(request, *args, **kwargs):
+        try:
+            course = get_object(TestOption.objects, select_related=('test',),
+                                pk=kwargs.get('pk')).test.lesson.theme.course
         except ObjectDoesNotExist as e:
             return error_response(e, 404)
         if request.user == course.author:

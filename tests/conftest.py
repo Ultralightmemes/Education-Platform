@@ -4,7 +4,7 @@ from unittest.mock import MagicMock
 import pytest
 from django.core.files import File
 
-from education.models import Course, Theme, Lesson, Category, ExerciseTask, TestTask
+from education.models import Course, Theme, Lesson, Category, ExerciseTask, TestTask, TestOption
 from user.models import UserCourse
 
 
@@ -92,7 +92,8 @@ def create_test_course(db, create_mock_file, create_default_user):
                                  is_published=True,
                                  text='text',
                                  image=create_mock_file,
-                                 author=user)
+                                 author=user,
+                                 )
 
 
 @pytest.fixture
@@ -101,7 +102,8 @@ def create_test_theme(db, create_test_course):
                                 course=create_test_course,
                                 description='description',
                                 is_published=True,
-                                position=1)
+                                position=1,
+                                )
 
 
 @pytest.fixture
@@ -110,7 +112,8 @@ def create_test_lesson(db, create_test_theme):
                                  theme=create_test_theme,
                                  text='text',
                                  is_published=True,
-                                 position=1)
+                                 position=1,
+                                 )
 
 
 @pytest.fixture
@@ -121,17 +124,27 @@ def create_test_exercise(db, create_test_lesson):
                                        text='text',
                                        classname='ExerciseTask',
                                        is_published=True,
-                                       answer='answer')
+                                       answer='answer'
+                                       )
 
 
-@pytest.fixture()
+@pytest.fixture
 def create_test_test(db, create_test_lesson):
     return TestTask.objects.create(title='title',
                                    lesson=create_test_lesson,
                                    position=1,
                                    text='text',
                                    classname='TestTask',
-                                   is_published=True,)
+                                   is_published=True,
+                                   )
+
+
+@pytest.fixture
+def create_test_option(db, create_test_test):
+    return TestOption.objects.create(text='text',
+                                     is_true=True,
+                                     test=create_test_test,
+                                     )
 
 
 @pytest.fixture

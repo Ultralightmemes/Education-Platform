@@ -5,13 +5,13 @@ from rest_framework.response import Response
 
 from common.service import filter_objects, get_object, delete_object
 from education.decorators import catch_does_not_exist
-from education.models import Course, Theme, Lesson, ExerciseTask, TestTask
+from education.models import Course, Theme, Lesson, ExerciseTask, TestTask, TestOption
 from education.service import calculate_course_rating
 from teacher.decorators import check_is_theme_author, check_is_course_author, check_is_lesson_author, \
-    check_is_task_author
+    check_is_task_author, check_if_option_author
 from teacher.serializers import CourseListSerializer, CreateCourseSerializer, CourseDetailSerializer, \
     ThemeUpdateSerializer, ThemeSerializer, CreateLessonSerializer, LessonSerializer, ExerciseSerializer, \
-    CreateExerciseSerializer, TestTaskSerializer, CreateTestTaskSerializer
+    CreateExerciseSerializer, TestTaskSerializer, CreateTestTaskSerializer, TestOptionSerializer
 from teacher.service import TeacherPermission, get_themes_with_lessons_counted
 
 
@@ -188,18 +188,19 @@ def exercise_task_detail_api_view(request, pk=None):
 @api_view(['GET', 'POST'])
 @catch_does_not_exist
 @check_is_task_author
-def test_task_api_view(request, lesson_pk=None):
+def task_test_api_view(request, lesson_pk=None):
     if request.method == 'GET':
         tests = filter_objects(TestTask.objects, lesson_id=lesson_pk)
         serializer = TestTaskSerializer(tests, many=True)
         return Response(serializer.data)
-
+# TODO decide what to do with options(better to create different view for post delete and update)
     elif request.method == 'POST':
         lesson = get_object(Lesson.objects, pk=lesson_pk)
         serializer = CreateTestTaskSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save(lesson=lesson)
         else:
+            print(serializer.errors)
             return Response(status=status.HTTP_400_BAD_REQUEST)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
 
@@ -207,7 +208,7 @@ def test_task_api_view(request, lesson_pk=None):
 @api_view(['GET', 'DELETE', 'PATCH'])
 @catch_does_not_exist
 @check_is_task_author
-def test_task_detail_api_view(request, pk=None):
+def task_test_detail_api_view(request, pk=None):
     if request.method == 'GET':
         test = get_object(TestTask.objects, pk=pk)
         serializer = TestTaskSerializer(test)
@@ -226,3 +227,20 @@ def test_task_detail_api_view(request, pk=None):
         delete_object(TestTask.objects, pk=pk)
         return Response(status=status.HTTP_204_NO_CONTENT)
 
+
+@api_view(['PATCH', 'DELETE'])
+@catch_does_not_exist
+@check_if_option_author
+def option_api_view(request, pk=None):
+    if request.method == 'DELETE':
+        delete_object(TestOption.objects, pk=pk)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    elif request.method == 'PATCH':
+        option = get_object(TestOption.objects, pk=pk)
+        serializer = TestOptionSerializer(option, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+        else:
+            return Response(status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.data)
