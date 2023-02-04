@@ -74,6 +74,7 @@ class CourseSerializer(ModelSerializer):
 class LessonSerializer(ModelSerializer):
     is_done = serializers.BooleanField()
     is_auto_done = serializers.BooleanField()
+    index = serializers.IntegerField()
 
     class Meta:
         model = Lesson
@@ -82,6 +83,7 @@ class LessonSerializer(ModelSerializer):
                   'position',
                   'is_done',
                   'is_auto_done',
+                  'index',
                   ]
 
 
@@ -160,7 +162,6 @@ class TestAnswerSerializer(serializers.Serializer):
 
 
 class AnswerSerializer(serializers.Serializer):
-    lesson = serializers.IntegerField()
     exercises = ExerciseAnswerSerializer(many=True)
     tests = TestAnswerSerializer(many=True)
 

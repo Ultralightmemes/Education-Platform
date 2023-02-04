@@ -1,6 +1,15 @@
 import functools
 
 
+# TODO add values
+def order_by_decorator(function):
+    @functools.wraps(function)
+    def wrapper(objects, order_by=(), **kwargs):
+        return function(objects.order_by(*order_by), **kwargs)
+
+    return wrapper
+
+
 def prefetch_related_decorator(function):
     @functools.wraps(function)
     def wrapper(objects, prefetch_related=(), **kwargs):
@@ -36,11 +45,17 @@ def delete_object(objects, **kwargs):
 
 @prefetch_related_decorator
 @select_related_decorator
+@order_by_decorator
 def get_all_objects(objects):
     return objects.all()
 
 
 @prefetch_related_decorator
 @select_related_decorator
+@order_by_decorator
 def filter_objects(objects, **kwargs):
     return objects.filter(**kwargs)
+
+
+def save_object(objects):
+    objects.save()

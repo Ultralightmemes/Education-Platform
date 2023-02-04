@@ -1,6 +1,5 @@
-import functools
-
-from django.db.models import Q, Prefetch
+from django.db.models import Q, Prefetch, Window, F
+from django.db.models.functions import Rank, DenseRank
 
 from education.models import Theme, Lesson, Course, TestTask, ExerciseTask
 from user.models import UserCourse, UserLesson
@@ -15,12 +14,18 @@ def calculate_course_rating(course):
 
 
 def annotate_themes(user, course_pk):
-    themes = Theme.objects.prefetch_related(Prefetch('lessons', Lesson.objects.filter(is_published=True))) \
-        .filter(course_id=course_pk, is_published=True)
+    themes = Theme.objects.prefetch_related(
+        Prefetch('lessons', Lesson.objects.filter(is_published=True))
+    ).filter(course_id=course_pk,
+             is_published=True,
+             )
+    index = 1
     for theme in themes:
         for lesson in theme.lessons.all():
             lesson.is_done = check_if_lesson_is_done(lesson, user)
             lesson.is_auto_done = False if lesson.tasks.all() else True
+            lesson.index = index
+            index += 1
     return themes
 
 
@@ -33,7 +38,7 @@ def check_if_lesson_is_done(lesson, user):
 
 
 def annotate_courses(user):
-    courses = Course.objects.prefetch_related('categories').filter(usercourse__user=user)
+    courses = Course.objects.prefetch_related('categories').filter(usercourse__user=user, is_published=True)
     for course in courses:
         lesson_num = Lesson.objects.filter(theme__course=course).count()
         if lesson_num == 0:

@@ -1,7 +1,6 @@
 from datetime import date
 
 from django.db import models
-from django.utils import timezone
 
 
 class Category(models.Model):
@@ -69,7 +68,7 @@ def validate_file_extension(value):
 
 class Lesson(models.Model):
     title = models.CharField(max_length=255, verbose_name='Название')
-    theme = models.ForeignKey(Theme, on_delete=models.PROTECT, verbose_name='Тема', related_name='lessons')
+    theme = models.ForeignKey(Theme, on_delete=models.CASCADE, verbose_name='Тема', related_name='lessons')
     video = models.FileField(blank=True, verbose_name='Видео', upload_to='lesson/%Y/%m/%d',
                              validators=[validate_file_extension])
     position = models.PositiveSmallIntegerField(verbose_name='Позиция')
