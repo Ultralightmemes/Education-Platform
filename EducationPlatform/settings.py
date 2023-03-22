@@ -2,6 +2,8 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
+import dj_database_url
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get('SECRET_KEY')
@@ -80,27 +82,30 @@ WSGI_APPLICATION = 'EducationPlatform.wsgi.application'
 
 # Celery settings for docker
 
-# CELERY_BROKER_URL = os.environ.get("CELERY_BROKER", "redis://redis:6379/0")
-# CELERY_RESULT_BACKEND = os.environ.get("CELERY_BACKEND", "redis://redis:6379/0")
+CELERY_BROKER_URL = os.environ.get("CELERY_BROKER", "redis://redis:6379/0")
+CELERY_RESULT_BACKEND = os.environ.get("CELERY_BACKEND", "redis://redis:6379/0")
 
 
 # Default Celery settings
 
-RESULT_BACKEND = "redis://127.0.0.1:6379"
-BROKER_URL = "redis://127.0.0.1:6379"
-accept_content = ['application/json']
-result_serializer = 'json'
-
+# RESULT_BACKEND = "redis://127.0.0.1:6379"
+# BROKER_URL = "redis://127.0.0.1:6379"
+# accept_content = ['application/json']
+# result_serializer = 'json'
 
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': os.environ.get('MYSQL_DATABASE', 'platform'),
-        'USER': os.environ.get('MYSQL_USER', 'root'),
-        'PASSWORD': os.environ.get('MYSQL_PASSWORD', 'admin'),
-        'HOST': os.environ.get('MYSQL_DATABASE_HOST', 'localhost'),
-    }
+    'default': dj_database_url.config(conn_max_age=600, ssl_require=True)
 }
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',
+#         'NAME': os.environ.get('MYSQL_DATABASE', 'platform'),
+#         'USER': os.environ.get('MYSQL_USER', 'root'),
+#         'PASSWORD': os.environ.get('MYSQL_PASSWORD', 'admin'),
+#         'HOST': os.environ.get('MYSQL_DATABASE_HOST', 'localhost'),
+#     }
+# }
 
 # Password validation
 # https://docs.djangoproject.com/en/4.1/ref/settings/#auth-password-validators
