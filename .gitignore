@@ -6,7 +6,6 @@ celerybeat-schedule.bak
 celerybeat-schedule.dat
 celerybeat-schedule.dir
 dump.rdb
-.env
 .coverage
 .pytest_cache
 pytest.ini

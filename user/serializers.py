@@ -1,4 +1,6 @@
 from rest_framework import serializers
+from rest_framework_simplejwt.tokens import RefreshToken
+from six import text_type
 
 from user.models import User
 
@@ -9,14 +11,32 @@ class RegistrationSerializer(serializers.ModelSerializer):
         min_length=8,
         write_only=True
     )
+    tokens = serializers.SerializerMethodField(method_name='get_tokens')
+    email = serializers.CharField()
 
     class Meta:
         model = User
         fields = ['email',
                   'first_name',
                   'last_name',
-                  'password'
+                  'password',
+                  'tokens',
                   ]
+
+    def get_tokens(self, user):
+        tokens = RefreshToken.for_user(user)
+        refresh_token = text_type(tokens)
+        access_token = text_type(tokens.access_token)
+        data = {
+            'refresh': refresh_token,
+            'access': access_token
+        }
+        return data
+
+    def validate_email(self, value):
+        if value and User.objects.filter(email__exact=value).exists():
+            raise serializers.ValidationError('User wih same email is already registered')
+        return value
 
     def create(self, validated_data):
         return User.objects.create_user(**validated_data)

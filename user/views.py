@@ -9,10 +9,20 @@ from user.serializers import RegistrationSerializer, UserSerializer
 from user.service import blacklist_token
 
 
-class RegistrationAPIView(generics.CreateAPIView):
-    queryset = User.objects.all()
-    permission_classes = (AllowAny,)
-    serializer_class = RegistrationSerializer
+# class RegistrationAPIView(generics.CreateAPIView):
+#     queryset = User.objects.all()
+#     permission_classes = (AllowAny,)
+#     serializer_class = RegistrationSerializer
+
+
+@api_view(['POST'])
+def register_user(request):
+    serializer = RegistrationSerializer(data=request.data)
+    if serializer.is_valid():
+        serializer.save()
+    else:
+        return Response(status=status.HTTP_400_BAD_REQUEST)
+    return Response(serializer.data)
 
 
 class UserAPIView(generics.RetrieveUpdateDestroyAPIView):
@@ -43,7 +53,7 @@ class UserAPIView(generics.RetrieveUpdateDestroyAPIView):
 @api_view(['POST'])
 def logout_user(request):
     try:
-        blacklist_token(request.data["refresh_token"])
+        blacklist_token(request.data["refresh"])
         return Response(status=status.HTTP_205_RESET_CONTENT)
     except Exception:
         return Response(status=status.HTTP_400_BAD_REQUEST)
