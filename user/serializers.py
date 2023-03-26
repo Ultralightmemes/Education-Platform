@@ -44,20 +44,22 @@ class RegistrationSerializer(serializers.ModelSerializer):
 
 class UserSerializer(serializers.ModelSerializer):
     is_staff = serializers.BooleanField(read_only=True)
+    is_teacher = serializers.BooleanField(read_only=True)
 
     class Meta:
         model = User
-        fields = ['email',
-                  'first_name',
-                  'last_name',
-                  'patronymic',
-                  'image',
-                  'is_staff'
-                  ]
+        fields = [
+            'email',
+            'first_name',
+            'last_name',
+            'patronymic',
+            'image',
+            'is_staff',
+            'is_teacher',
+        ]
 
 
 class ImageSerializer(serializers.ModelSerializer):
-
     class Meta:
         model = User
         fields = ['image']
@@ -68,5 +70,3 @@ class AnswerSerializer(serializers.Serializer):
     lesson_id = serializers.IntegerField(read_only=True)
     answer_id = serializers.ListField(child=serializers.IntegerField(), required=False)
     answer = serializers.CharField(max_length=255, required=False)
-
-

@@ -8,10 +8,10 @@ from rest_framework.response import Response
 from common.service import get_object, get_or_create_object, save_object, filter_objects
 from education.decorators import catch_does_not_exist, check_user_subscription_to_course, \
     check_user_subscription_to_lesson
-from education.models import Course, Lesson, Category
+from education.models import Course, Lesson, Category, TestTask, ExerciseTask
 from education.serializers import CourseSerializer, MultipleCourseSerializer, CategorySerializer, \
     LessonPaginationSerializer, ThemeWithLessonSerializer, RateSerializer, AnswerSerializer, \
-    CategoryDetailSerializer
+    CategoryDetailSerializer, TestTaskSerializer, ExerciseTaskSerializer
 from education.service import calculate_course_rating, annotate_courses, count_exercise_percents, annotate_themes
 from education.tasks import send_subscribe_mail
 from user.models import User, UserCourse, UserLesson
@@ -41,7 +41,7 @@ class CourseViewSet(viewsets.ReadOnlyModelViewSet):
 
     @catch_does_not_exist
     def retrieve(self, request, pk=None, *args, **kwargs):
-        course = get_object(Course.objects, prefetch_related=('themes', 'categories'), pk=pk)
+        course = get_object(Course.objects, prefetch_related=('themes', 'categories', 'author'), pk=pk)
         course.rating = calculate_course_rating(course)
         serializer = CourseSerializer(course)
         return Response(serializer.data)
@@ -129,6 +129,25 @@ def lesson_answer_api_view(request, pk=None):
     else:
         return Response(status=status.HTTP_400_BAD_REQUEST)
     return Response(status=status.HTTP_202_ACCEPTED)
+
+#TODO make permissions
+
+@api_view(['GET'])
+@catch_does_not_exist
+@permission_classes([IsAuthenticated])
+def task_test_api_view(request, pk=None):
+    test_tasks = TestTask.objects.filter(lesson_id=pk)
+    serializer = TestTaskSerializer(test_tasks, many=True)
+    return Response(serializer.data)
+
+
+@api_view(['GET'])
+@catch_does_not_exist
+@permission_classes([IsAuthenticated])
+def exercise_api_view(request, pk=None):
+    exercises = ExerciseTask.objects.filter(lesson_id=pk)
+    serializer = ExerciseTaskSerializer(exercises, many=True)
+    return Response(serializer.data)
 
 
 class CategoryViewSet(viewsets.ReadOnlyModelViewSet):

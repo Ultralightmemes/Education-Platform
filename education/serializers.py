@@ -2,7 +2,7 @@ from rest_framework import serializers
 from rest_framework.serializers import ModelSerializer
 
 from education.models import Course, Lesson, Theme, Category, ExerciseTask, TestOption, TestTask, CourseCategories
-from user.models import UserCourse
+from user.models import UserCourse, User
 
 
 class ThemeInCourseSerializer(ModelSerializer):
@@ -61,9 +61,21 @@ class CourseCategorySerializer(serializers.ModelSerializer):
                   )
 
 
+class AuthorSerializer(ModelSerializer):
+
+    class Meta:
+        model = User
+        fields = [
+            'id',
+            'first_name',
+            'last_name',
+        ]
+
+
 class CourseSerializer(ModelSerializer):
     themes = ThemeInCourseSerializer(many=True)
     categories = CategorySerializer(many=True)
+    author = AuthorSerializer()
     rating = serializers.FloatField()
 
     class Meta:

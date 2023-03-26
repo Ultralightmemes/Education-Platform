@@ -27,7 +27,8 @@ class Course(models.Model):
     update_date = models.DateField(auto_now=True, verbose_name='Обновлён')
     is_published = models.BooleanField(default=False, verbose_name='Опубликован')
     text = models.TextField(verbose_name='Описание')
-    image = models.ImageField(upload_to='course/%Y/%m/%d', verbose_name='Изображение', default='course/Ruby.png')
+    image = models.ImageField(upload_to='course/%Y/%m/%d', verbose_name='Изображение',
+                              default='')
     author = models.ForeignKey('user.User', on_delete=models.SET_NULL, blank=True, verbose_name='Автор',
                                related_name='created_courses', null=True)
     objects = models.Manager()

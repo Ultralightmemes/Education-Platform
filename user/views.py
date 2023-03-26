@@ -5,7 +5,7 @@ from rest_framework import generics, status
 from rest_framework.response import Response
 
 from user.models import User
-from user.serializers import RegistrationSerializer, UserSerializer
+from user.serializers import RegistrationSerializer, UserSerializer, ImageSerializer
 from user.service import blacklist_token
 
 
@@ -21,7 +21,7 @@ def register_user(request):
     if serializer.is_valid():
         serializer.save()
     else:
-        return Response(status=status.HTTP_400_BAD_REQUEST)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     return Response(serializer.data)
 
 
@@ -37,6 +37,16 @@ class UserAPIView(generics.RetrieveUpdateDestroyAPIView):
         obj = get_object_or_404(queryset, pk=self.request.user.id)
         return obj
 
+    def update(self, request, *args, **kwargs):
+        user = request.user
+        serializer = UserSerializer(user, data=request.data, partial=True)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data)
+        else:
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
     def destroy(self, request, *args, **kwargs):
         user = request.user
         if user.is_anonymous:
@@ -48,6 +58,16 @@ class UserAPIView(generics.RetrieveUpdateDestroyAPIView):
             return Response(status=status.HTTP_205_RESET_CONTENT)
         except Exception:
             return Response(status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['PATCH'])
+def update_image(request):
+    user = request.user
+    serializer = UserSerializer(user, data=request.data, partial=True)
+    if serializer.is_valid():
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 @api_view(['POST'])

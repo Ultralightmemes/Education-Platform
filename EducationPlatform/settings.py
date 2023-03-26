@@ -4,21 +4,26 @@ from pathlib import Path
 
 import dj_database_url
 
+PORT = int(os.environ.get('PORT', 8000))
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.environ.get('SECRET_KEY')
 
 DEBUG = str(os.environ.get('DEBUG')) == "1"
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'education-django.herokuapp.com']
 
 CORS_ORIGIN_ALLOW_ALL = True
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOWED_ORIGINS = ['http://127.0.0.1:8000', 'http://127.0.0.1:3000']
-CORS_ORIGIN_WHITELIST = ['http://localhost:3000', 'http://127.0.0.1:3000']
+CORS_ALLOWED_ORIGINS = ['http://127.0.0.1:8000', 'http://127.0.0.1:3000', 'https://education-platform.herokuapp.com',
+                        'https://education-django.herokuapp.com']
+CORS_ORIGIN_WHITELIST = ['http://localhost:3000', 'http://127.0.0.1:3000', 'https://education-platform.herokuapp.com',
+                         'https://education-django.herokuapp.com']
 CORS_ALLOW_HEADERS = ('content-disposition', 'accept-encoding',
                       'content-type', 'accept', 'origin', 'Authorization',
-                      'access-control-allow-origin', )
+                      'access-control-allow-origin',)
+CSRF_TRUSTED_ORIGINS = ['https://education-django.herokuapp.com']
 
 INTERNAL_IPS = [
     '127.0.0.1'
@@ -56,6 +61,7 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 
     'debug_toolbar.middleware.DebugToolbarMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
 
 ]
 
@@ -79,12 +85,10 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'EducationPlatform.wsgi.application'
 
-
 # Celery settings for docker
 
 CELERY_BROKER_URL = os.environ.get("CELERY_BROKER", "redis://redis:6379/0")
 CELERY_RESULT_BACKEND = os.environ.get("CELERY_BACKEND", "redis://redis:6379/0")
-
 
 # Default Celery settings
 
@@ -93,19 +97,24 @@ CELERY_RESULT_BACKEND = os.environ.get("CELERY_BACKEND", "redis://redis:6379/0")
 # accept_content = ['application/json']
 # result_serializer = 'json'
 
-DATABASES = {
-    'default': dj_database_url.config(conn_max_age=600, ssl_require=True)
-}
+# heroku database config
 
 # DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.mysql',
-#         'NAME': os.environ.get('MYSQL_DATABASE', 'platform'),
-#         'USER': os.environ.get('MYSQL_USER', 'root'),
-#         'PASSWORD': os.environ.get('MYSQL_PASSWORD', 'admin'),
-#         'HOST': os.environ.get('MYSQL_DATABASE_HOST', 'localhost'),
+#     'default': dj_database_url.config(conn_max_age=600),
+#     'OPTIONS': {
+#         'sql_mode': 'traditional',
 #     }
 # }
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': os.environ.get('MYSQL_DATABASE', 'platform'),
+        'USER': os.environ.get('MYSQL_USER', 'root'),
+        'PASSWORD': os.environ.get('MYSQL_PASSWORD', 'admin'),
+        'HOST': os.environ.get('MYSQL_DATABASE_HOST', 'localhost'),
+    }
+}
 
 # Password validation
 # https://docs.djangoproject.com/en/4.1/ref/settings/#auth-password-validators
@@ -125,7 +134,6 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
 # https://docs.djangoproject.com/en/4.1/topics/i18n/
 
@@ -136,7 +144,6 @@ TIME_ZONE = 'Europe/Minsk'
 USE_I18N = True
 
 USE_TZ = True
-
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.1/howto/static-files/
@@ -161,8 +168,13 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
+    'DEFAULT_PARSER_CLASSES': (
+        'rest_framework.parsers.FormParser',
+        'rest_framework.parsers.MultiPartParser',
+        'rest_framework.parsers.JSONParser'
+    ),
     'TEST_REQUEST_DEFAULT_FORMAT': 'json',
-    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema'
 }
 
 SIMPLE_JWT = {

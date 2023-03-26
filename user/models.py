@@ -1,6 +1,6 @@
 from django.contrib.auth.base_user import BaseUserManager
 from django.contrib.auth.models import AbstractUser
-from django.core.validators import MaxValueValidator, MinValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator, FileExtensionValidator
 from django.db import models
 
 from education.models import Course, Lesson
@@ -30,8 +30,8 @@ class UserAccountManager(BaseUserManager):
 
 class User(AbstractUser):
     email = models.EmailField(max_length=255, unique=True, db_index=True, verbose_name='Почтовый адрес')
-    first_name = models.CharField(max_length=255, verbose_name='Имя')
-    last_name = models.CharField(max_length=255, verbose_name='Фамилия')
+    first_name = models.CharField(max_length=255, verbose_name='Имя', blank=False)
+    last_name = models.CharField(max_length=255, verbose_name='Фамилия', blank=False)
     patronymic = models.CharField(max_length=255, blank=True, verbose_name='Отчество')
     is_active = models.BooleanField(default=True, verbose_name='Активен')
     is_staff = models.BooleanField(default=False, verbose_name='Работник')
@@ -39,7 +39,8 @@ class User(AbstractUser):
     username = None
     courses = models.ManyToManyField(Course, through='UserCourse', related_name='users', verbose_name='Курсы')
     lessons = models.ManyToManyField(Lesson, through='UserLesson', related_name='users', verbose_name='Занятия')
-    image = models.ImageField(upload_to='profile/%Y/%m/%d', blank=True, verbose_name='Аватар')
+    image = models.ImageField(upload_to='profile/%Y/%m/%d', blank=True, verbose_name='Аватар',
+                              validators=[FileExtensionValidator(allowed_extensions=['jpg', 'jpeg', 'png'])])
 
     objects = UserAccountManager()
 

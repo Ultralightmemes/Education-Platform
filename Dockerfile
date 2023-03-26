@@ -11,6 +11,8 @@ RUN pip install -r /usr/src/req.txt
 
 COPY . /usr/src/api
 
-EXPOSE 8000
+EXPOSE $PORT
 
 CMD ["python", "manage.py", "migrate"]
+#CMD ["python", "manage.py", "runserver", "0.0.0.0:"]
+CMD python manage.py runserver 0.0.0.0:$PORT

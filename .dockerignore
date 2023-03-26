@@ -9,4 +9,4 @@ dump.rdb
 .coverage
 .pytest_cache
 pytest.ini
-.env
+/tests
